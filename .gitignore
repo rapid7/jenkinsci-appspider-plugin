@@ -65,3 +65,4 @@ crashlytics-build.properties
 # Custom folder to ignore
 /target/
 /work/
+/temp/

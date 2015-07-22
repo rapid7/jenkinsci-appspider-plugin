@@ -11,7 +11,7 @@
   -->
   <f:section>
     <f:entry field="scanConfig" title="Scan Configuration Name">
-      <f:textbox />
+      <f:select />
     </f:entry>
     <f:entry field="scanFilename" title="Scan Filename">
       <f:textbox />

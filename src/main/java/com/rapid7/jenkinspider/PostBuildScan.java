@@ -1,6 +1,7 @@
 package com.rapid7.jenkinspider;
 
 import hudson.Extension;
+import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
@@ -9,14 +10,20 @@ import hudson.model.Descriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Publisher;
 import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
 import org.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 import javax.servlet.ServletException;
-import java.io.IOException;
-import java.io.PrintStream;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.rapid7.appspider.*;
@@ -73,6 +80,8 @@ public class PostBuildScan extends Publisher {
         log.println("Value of NTOEnterprise Password: " + ntoPassword);
         log.println("Value of Scan Configuration name: " + scanConfig);
         log.println("Value of Scan Filename: " + scanFilename);
+        log.println("Saving the " + scanFilename + " to " + build.getWorkspace().getBaseName());
+
 
         // Don't perform a scan
         if (!enableScan) {
@@ -123,8 +132,24 @@ public class PostBuildScan extends Publisher {
             return false;
         }
 
-        ReportManagement.getVulnerabilitiesSummaryXml(ntoEntUrl,ntoEntApiKey,scanId);
+        FilePath filePath = build.getWorkspace();
+        String xmlFile = ReportManagement.getVulnerabilitiesSummaryXml(ntoEntUrl,ntoEntApiKey,scanId);
+        SaveToFile(filePath.getBaseName() +"/" + scanFilename + ".report" , xmlFile);
         return true;
+    }
+
+    private static void SaveToFile(String filename, String data) {
+        File file = new File(filename);
+        try {
+            if (!file.exists()) file.createNewFile();
+            BufferedWriter bw = new BufferedWriter(new FileWriter(file.getAbsoluteFile()));
+            bw.write(data);
+            bw.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     // Overridden for better type safety.
@@ -148,6 +173,7 @@ public class PostBuildScan extends Publisher {
         private String ntoEntApiKey;
         private String ntoLogin;
         private String ntoPassword;
+        private String[] ntoConfigNames;
 
         public DescriptorImp() { load(); }
 
@@ -163,7 +189,7 @@ public class PostBuildScan extends Publisher {
          *      prevent the form from being saved. It just means that a message
          *      will be displayed to the user.
          */
-        public FormValidation doCheckName(@QueryParameter String value)
+        public FormValidation doCheckNtoEntUrl(@QueryParameter String value)
                 throws IOException, ServletException {
             if (value.length() == 0)
                 return FormValidation.error("Please set a value");
@@ -172,14 +198,24 @@ public class PostBuildScan extends Publisher {
             return FormValidation.ok();
         }
 
+        /**
+         * @param aClass
+         * @return boolean
+         */
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             // Indicates that this builder can be used with all kinds of project types
             return true;
         }
 
+        /**
+         * @return String
+         */
         @Override
         public String getDisplayName() { return "Publish Scan to NTOEnterprise"; }
 
+        /**
+         * @return
+         */
         public String getNtoEntUrl() { return ntoEntUrl; }
 
         public String getNtoEntApiKey() { return ntoEntApiKey; }
@@ -188,14 +224,37 @@ public class PostBuildScan extends Publisher {
 
         public String getNtoPassword() { return ntoPassword; }
 
+        public String[] getNtoConfigNames() { return ntoConfigNames; }
+
         @Override
         public boolean configure(StaplerRequest req, net.sf.json.JSONObject formData) throws FormException {
             this.ntoEntUrl = formData.getString("ntoEntUrl");
             this.ntoEntApiKey = formData.getString("ntoEntApiKey");
             this.ntoLogin = formData.getString("ntoLogin");
             this.ntoPassword = formData.getString("ntoPassword");
+//          this.ntoConfigNames = getConfigNames();
             save();
             return super.configure(req, net.sf.json.JSONObject.fromObject(formData));
+        }
+
+        public ListBoxModel doFillScanConfigItems(){
+            ntoConfigNames = getConfigNames();
+            ListBoxModel items = new ListBoxModel();
+            for (int i = 0; i < ntoConfigNames.length; i++ ){
+                items.add(ntoConfigNames[i]);
+            }
+            return items;
+        }
+
+        /**
+         * @return
+         */
+        private String[] getConfigNames() {
+            if (ntoEntApiKey.isEmpty()) {
+                this.ntoEntApiKey = Authentication.authenticate(ntoEntUrl, ntoLogin, ntoPassword);
+            }
+            String[] configNames = ScanConfiguration.getConfigNames(ntoEntUrl,ntoEntApiKey);
+            return configNames;
         }
     }
 

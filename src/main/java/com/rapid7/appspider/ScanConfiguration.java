@@ -1,5 +1,6 @@
 package com.rapid7.appspider;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
@@ -14,6 +15,11 @@ public class ScanConfiguration extends Base {
     private static final String GETATTACHMENT = "/Config/GetAttachment";
     private static final String GETATTACHMENTS = "/Config/GetAttachments";
 
+    /**
+     * @param restUrl
+     * @param authToken
+     * @return
+     */
     public static JSONObject getConfigs(String restUrl, String authToken) {
         String apiCall = restUrl + GETCONFIGS;
         Object response = get(apiCall, authToken);
@@ -21,5 +27,20 @@ public class ScanConfiguration extends Base {
             return (JSONObject) response;
         }
         return null;
+    }
+
+    /**
+     * @param restUrl
+     * @param authToken
+     * @return
+     */
+    public static String[] getConfigNames(String restUrl, String authToken){
+        JSONObject response = getConfigs(restUrl, authToken);
+        JSONArray jsonConfigs = response.getJSONArray("Configs");
+        String[] configNames = new String[jsonConfigs.length()];
+        for (int i = 0; i < jsonConfigs.length(); i++) {
+            configNames[i] = jsonConfigs.getJSONObject(i).getString("Name");
+        }
+        return configNames;
     }
 }
