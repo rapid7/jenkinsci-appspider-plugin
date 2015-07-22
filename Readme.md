@@ -2,7 +2,7 @@
 Jenkinspider is a plugin developed to be used in Jenkins to scan builds
 
 ### Prerequisite
-Things that are needed to
+Things that are needed:
 * AppSpider Enterprise Rest URL
 * Username and password to the AppSpider Enterprise Server
 
@@ -35,7 +35,7 @@ Things that are needed to
     $ cd jenkinspider
     ```
     
-3. A. Build the hpi file. For first time build run: 
+3. Build the hpi file. For first time build run: 
     ```sh
     $ mvn hpi:run
     ```
@@ -43,3 +43,5 @@ Things that are needed to
     ```sh
     $ mvn hpi:hpi
     ```
+
+4. The hpi file is located at target/jenkinspider.hpi
