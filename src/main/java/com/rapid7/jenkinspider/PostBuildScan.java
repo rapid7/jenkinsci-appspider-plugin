@@ -165,7 +165,7 @@ public class PostBuildScan extends Publisher {
 
         /* Saving the Re*/
         SaveToFile(filePath.getParent() + "/" + filePath.getBaseName() + "/" + scanFilename + "_" +
-                new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date()) + ".xml", xmlFile);
+                new SimpleDateFormat("yyyy.MM.dd_HH.mm.ss").format(new Date()) + ".xml", xmlFile);
         log.println("Generating report done.");
         return true;
     }
