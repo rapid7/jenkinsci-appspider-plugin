@@ -17,13 +17,9 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 import javax.servlet.ServletException;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 import com.rapid7.appspider.*;
@@ -35,8 +31,8 @@ import static java.lang.Thread.sleep;
  */
 public class PostBuildScan extends Publisher {
 
-    private final int SLEEPTIME = 120; //seconds
-    private final String SCAN_DONE_REGEX = "ed"; // Status that ends with 'ed' is a finished scan
+    private final int SLEEPTIME = 90; //seconds
+    private final String SCAN_DONE_REGEX = "Completed|Stopped"; // Status that ends with 'ed' is a finished scan
 
     private final String scanConfig;
     private final String scanFilename;
@@ -120,7 +116,8 @@ public class PostBuildScan extends Publisher {
                 // Sleep for SLEEPTIME seconds
                 TimeUnit.SECONDS.sleep(SLEEPTIME);
                 ntoEntApiKey = Authentication.authenticate(ntoEntUrl,ntoLogin,ntoPassword);
-
+                scanStatus = ScanManagement.getScanStatus(ntoEntUrl,ntoEntApiKey,scanId).getString("Status");
+                log.println("Scan status is: " + scanStatus);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -132,17 +129,28 @@ public class PostBuildScan extends Publisher {
             return false;
         }
 
+        log.println("Scan completed!");
+
+        /*
+        * DEBUGGING PURPOSES ONLY REMOVE
+        * REMOVE IN PRODUCTION
+        * START */
+        // scanId = "9a9309e9-3ede-43a9-9edb-7fab5031003c" ;
+        /* END */
+
         FilePath filePath = build.getWorkspace();
+        log.println("Generating xml report to:" + filePath.getBaseName());
         String xmlFile = ReportManagement.getVulnerabilitiesSummaryXml(ntoEntUrl,ntoEntApiKey,scanId);
-        SaveToFile(filePath.getBaseName() +"/" + scanFilename + ".report" , xmlFile);
+        SaveToFile(filePath.getParent() + "/" + filePath.getBaseName() + "/" + scanFilename + "_" + new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date()) + ".xml" , xmlFile);
+        log.println("Generating report done.");
         return true;
     }
 
     private static void SaveToFile(String filename, String data) {
         File file = new File(filename);
         try {
-            if (!file.exists()) file.createNewFile();
-            BufferedWriter bw = new BufferedWriter(new FileWriter(file.getAbsoluteFile()));
+            if (!file.exists()) { file.createNewFile(); }
+            BufferedWriter bw = new BufferedWriter(new FileWriter(file.getAbsolutePath()));
             bw.write(data);
             bw.close();
         } catch (FileNotFoundException e) {
