@@ -29,19 +29,15 @@ Things that are needed to
 ```sh
 $ git clone git@github.com:nbugash-r7/jenkinspider.git
 ```
-
 2. Change directory to the jenkinspider repository
 ```sh
 $ cd jenkinspider
 ```
-
-3a. Build the hpi file. For first time build run: 
+3. A. Build the hpi file. For first time build run: 
 ```sh
 $ mvn hpi:run
 ```
-when the build is complete, kill the session by CTRL + C
-
-3b. For successive build:
+when the build is complete, kill the session by CTRL + C. For successive build:
 ```sh
 $ mvn hpi:hpi
 ```
