@@ -205,6 +205,8 @@ public class PostBuildScan extends Publisher {
     @Extension
     public static final class DescriptorImp extends Descriptor<Publisher> {
 
+        private static int AUTHTOKEN_LENGTH = 584;
+
         private String ntoEntUrl;
         private String ntoEntApiKey;
         private String ntoLogin;
@@ -292,6 +294,22 @@ public class PostBuildScan extends Publisher {
                 items.add(ntoConfigNames[i]);
             }
             return items;
+        }
+
+        public FormValidation doTestCredentials(@QueryParameter("ntoEntUrl") final String ntoRestUrl,
+                                                @QueryParameter("ntoLogin") final String ntoLogin,
+                                                @QueryParameter("ntoPassword") final String ntoPassword) {
+            try {
+                String authToken = Authentication.authenticate(ntoRestUrl, ntoLogin, ntoPassword);
+                if (!authToken.equals(null) && authToken.length() == AUTHTOKEN_LENGTH) {
+                    return FormValidation.ok("Connected Successfully.");
+                } else {
+                    return FormValidation.error("Invalid username / password combination");
+                }
+            } catch (NullPointerException e) {
+                return FormValidation.error("Invalid username / password combination");
+            }
+
         }
 
         /**

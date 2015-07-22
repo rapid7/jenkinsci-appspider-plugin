@@ -111,7 +111,7 @@ public class Base {
      * @param password
      * @return Authentication Token from AppSpider
      */
-    public static String post(String apiCall, String username, String password) {
+    public static JSONObject post(String apiCall, String username, String password) {
         try {
             //Create HTTP Client
             HttpClient httpClient = HttpClientBuilder.create().build();
@@ -130,7 +130,7 @@ public class Base {
             if (statusCode == SUCCESS) {
                 // Obtain the JSON Object of the response
                 JSONObject jsonResponse = (JSONObject) getClassType(postResponse);
-                return jsonResponse.getString("Token");
+                return jsonResponse;
             } else {
                 throw new RuntimeException("Failed! HTTP error code: " + statusCode);
             }

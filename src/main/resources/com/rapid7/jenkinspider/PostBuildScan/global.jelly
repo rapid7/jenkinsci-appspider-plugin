@@ -18,6 +18,8 @@
     <f:entry field="ntoPassword" title="NTOEnterprise Server password">
       <f:password />
     </f:entry>
+    <f:validateButton
+      title="Test Credentials" method="testCredentials" with="ntoEntUrl,ntoLogin,ntoPassword" />
   </f:section>
 
 
