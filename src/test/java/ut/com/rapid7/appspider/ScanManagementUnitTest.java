@@ -13,43 +13,50 @@ public class ScanManagementUnitTest extends BaseUnitTest {
 
     @Test
     public void getScans() {
+        String restUrl = getRestUrl();
         String authToken = getAuthToken();
-        Object response = ScanManagement.getScans(this.getRestUrl(), authToken);
+        Object response = ScanManagement.getScans(restUrl, authToken);
         assertEquals(JSONObject.class, response.getClass());
     }
 
     @Test
     public void runScanByConfigId() {
+        String restUrl = getRestUrl();
         String authToken = getAuthToken();
-        Object response = ScanManagement.runScanByConfigId(this.getRestUrl(), authToken, this.getConfigId());
+        String configId = getConfigId();
+        Object response = ScanManagement.runScanByConfigId(restUrl, authToken, configId);
         assertEquals(response.getClass(), JSONObject.class);
     }
 
     @Test
     public void runScanByConfigName() {
+        String restUrl = getRestUrl();
         String authToken = getAuthToken();
-        Object response = ScanManagement.runScanByConfigName(this.getRestUrl(), authToken, this.getConfigName());
+        String configName = getConfigName();
+        Object response = ScanManagement.runScanByConfigName(restUrl, authToken, configName);
         assertEquals(response.getClass(), JSONObject.class);
         assertEquals(((JSONObject) response).getBoolean("IsSuccess"), true);
     }
 
     @Test
     public void getScanStatus() {
+        String restUrl = getRestUrl();
         String authToken = getAuthToken();
-        JSONObject scan = ScanManagement.runScanByConfigName(this.getRestUrl(), authToken, this.getConfigName());
-        String scanId = scan.getJSONObject("Scan").getString("Id");
-        Object response = ScanManagement.getScanStatus(this.getRestUrl(), authToken, scanId);
+        String scanId = getScanId();
+        Object response = ScanManagement.getScanStatus(restUrl, authToken, scanId);
         assertEquals(response.getClass(), JSONObject.class);
         assertEquals(((JSONObject) response).getBoolean("IsSuccess"), true);
+        assertEquals(((JSONObject) response).getString("Status"), "Completed");
     }
 
     @Test
     public void hasReport() {
+        String restUrl = getRestUrl();
         String authToken = getAuthToken();
-        JSONObject scan = ScanManagement.runScanByConfigName(this.getRestUrl(), authToken, this.getConfigName());
-        String scanId = scan.getJSONObject("Scan").getString("Id");
-        Object response = ScanManagement.hasReport(this.getRestUrl(), authToken, scanId);
+        String scanId = getScanId();
+        Object response = ScanManagement.hasReport(restUrl, authToken, scanId);
         assertEquals(response.getClass(), JSONObject.class);
         assertEquals(((JSONObject) response).getBoolean("IsSuccess"), true);
+        assertEquals(((JSONObject) response).getBoolean("Result"), true);
     }
 }

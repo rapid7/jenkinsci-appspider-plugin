@@ -37,16 +37,16 @@ public class PostBuildScan extends Publisher {
     private final String scanConfig;
     private final String scanFilename;
     private final Boolean enableScan;
-    private final Boolean monitorScan;
+    private final Boolean generateReport;
 
 
     @DataBoundConstructor
     public PostBuildScan(String scanConfig, String scanFilename,
-                         Boolean enableScan, Boolean monitorScan) {
+                         Boolean enableScan, Boolean generateReport) {
         this.scanConfig = scanConfig;
         this.scanFilename = scanFilename;
         this.enableScan = enableScan;
-        this.monitorScan = monitorScan;
+        this.generateReport = generateReport;
     }
 
     @Override
@@ -69,8 +69,8 @@ public class PostBuildScan extends Publisher {
         return enableScan;
     }
 
-    public Boolean getMonitorScan() {
-        return monitorScan;
+    public Boolean getReport() {
+        return generateReport;
     }
 
     @Override
@@ -82,12 +82,11 @@ public class PostBuildScan extends Publisher {
         String ntoPassword = getDescriptor().getNtoPassword();
 
         log.println("Value of NTOEnterprise Server Url: " + ntoEntUrl);
-        log.println("Value of NTOEnterprise Server API Key: " + ntoEntApiKey);
+        log.println("Value of NTOEnterprise Server API Key: [FILTERED]");
         log.println("Value of NTOEnterprise Login: " + ntoLogin);
-        log.println("Value of NTOEnterprise Password: " + ntoPassword);
+        log.println("Value of NTOEnterprise Password: [FILTERED]");
         log.println("Value of Scan Configuration name: " + scanConfig);
         log.println("Value of Scan Filename: " + scanFilename);
-        log.println("Saving the " + scanFilename + " to " + build.getWorkspace().getBaseName());
 
 
         // Don't perform a scan
@@ -96,24 +95,41 @@ public class PostBuildScan extends Publisher {
             return false;
         }
 
+        /*
+        * Check if we need an authentication token
+        * */
         if (ntoEntApiKey.isEmpty()) {
             // We need to get the authToken
             ntoEntApiKey = Authentication.authenticate(ntoEntUrl, ntoLogin, ntoPassword);
         }
+
+        /*
+        * (1) Execute the scan
+        * (2) Obtain the response from the NTOEnterprise Server
+        * */
         JSONObject scanResponse = ScanManagement.runScanByConfigName(ntoEntUrl, ntoEntApiKey, scanConfig);
 
+        /*
+        * Check if a malformed response was received from the server
+        * */
         if (scanResponse.equals(null)) {
             log.println("Error: Check the JSON response from the NTOEnterprise Server");
             return false;
         }
 
+        /*
+        * Response received. Check if the request was successful.
+        * */
         if (!scanResponse.getBoolean("IsSuccess")) {
             log.println("Error: Response from " + ntoEntUrl + " came back not successful");
             return false;
         }
 
-        if (!monitorScan) {
-            log.println("Continuing the build without monitoring.");
+        /*
+        * If user opted out from the monitoring the scan, continue with the build process
+        * */
+        if (!generateReport) {
+            log.println("Continuing the build without generating the report.");
             return true;
         }
 
@@ -134,6 +150,7 @@ public class PostBuildScan extends Publisher {
             }
         }
 
+        /* Scan finished */
         scanResponse = ScanManagement.hasReport(ntoEntUrl, ntoEntApiKey, scanId);
         if (!scanResponse.getBoolean("Result")) {
             log.println("No reports for this scan: " + scanId);
@@ -142,16 +159,11 @@ public class PostBuildScan extends Publisher {
 
         log.println("Scan completed!");
 
-        /*
-        * DEBUGGING PURPOSES ONLY REMOVE
-        * REMOVE IN PRODUCTION
-        * START */
-        // scanId = "9a9309e9-3ede-43a9-9edb-7fab5031003c" ;
-        /* END */
-
         FilePath filePath = build.getWorkspace();
         log.println("Generating xml report to:" + filePath.getBaseName());
         String xmlFile = ReportManagement.getVulnerabilitiesSummaryXml(ntoEntUrl, ntoEntApiKey, scanId);
+
+        /* Saving the Re*/
         SaveToFile(filePath.getParent() + "/" + filePath.getBaseName() + "/" + scanFilename + "_" +
                 new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date()) + ".xml", xmlFile);
         log.println("Generating report done.");

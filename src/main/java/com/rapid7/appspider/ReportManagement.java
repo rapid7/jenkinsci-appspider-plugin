@@ -33,21 +33,5 @@ public class ReportManagement extends Base {
         params.put("scanId", scanId);
         String response = (String) get(apiCall, authToken, params);
         return response;
-//        return SaveToFile(scanId + (new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date())) + ".xml", response);
-    }
-
-    private static File SaveToFile(String filename, String data) {
-        File file = new File(filename);
-        try {
-            if (!file.exists()) file.createNewFile();
-            BufferedWriter bw = new BufferedWriter(new FileWriter(file.getAbsoluteFile()));
-            bw.write(data);
-            bw.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return file;
     }
 }

@@ -19,7 +19,7 @@
     <f:entry field="enableScan" title="Run the scan after the build finish?">
       <f:checkbox checked="true" />
     </f:entry>
-    <f:entry field="monitorScan" title="Monitor the scan in the console?">
+    <f:entry field="generateReport" title="Obtain the report after the scan finished?">
       <f:checkbox checked="true" />
     </f:entry>
   </f:section>
