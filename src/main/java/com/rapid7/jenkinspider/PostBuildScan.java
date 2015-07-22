@@ -32,7 +32,7 @@ import static java.lang.Thread.sleep;
 public class PostBuildScan extends Publisher {
 
     private final int SLEEPTIME = 90; //seconds
-    private final String SCAN_DONE_REGEX = "Completed|Stopped"; // Status that ends with 'ed' is a finished scan
+    private final String SCAN_DONE_REGEX = "Completed|Stopped";
 
     private final String scanConfig;
     private final String scanFilename;
@@ -42,7 +42,7 @@ public class PostBuildScan extends Publisher {
 
     @DataBoundConstructor
     public PostBuildScan(String scanConfig, String scanFilename,
-                         Boolean enableScan, Boolean monitorScan){
+                         Boolean enableScan, Boolean monitorScan) {
         this.scanConfig = scanConfig;
         this.scanFilename = scanFilename;
         this.enableScan = enableScan;
@@ -57,10 +57,21 @@ public class PostBuildScan extends Publisher {
     /*
     *  This will be used from the config.jelly
     * */
-    public String getScanConfig()   { return scanConfig;   }
-    public String getScanFilename() { return scanFilename; }
-    public Boolean getEnableScan()  { return enableScan;   }
-    public Boolean getMonitorScan() { return monitorScan;  }
+    public String getScanConfig() {
+        return scanConfig;
+    }
+
+    public String getScanFilename() {
+        return scanFilename;
+    }
+
+    public Boolean getEnableScan() {
+        return enableScan;
+    }
+
+    public Boolean getMonitorScan() {
+        return monitorScan;
+    }
 
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
@@ -87,7 +98,7 @@ public class PostBuildScan extends Publisher {
 
         if (ntoEntApiKey.isEmpty()) {
             // We need to get the authToken
-            ntoEntApiKey = Authentication.authenticate(ntoEntUrl,ntoLogin,ntoPassword);
+            ntoEntApiKey = Authentication.authenticate(ntoEntUrl, ntoLogin, ntoPassword);
         }
         JSONObject scanResponse = ScanManagement.runScanByConfigName(ntoEntUrl, ntoEntApiKey, scanConfig);
 
@@ -96,7 +107,7 @@ public class PostBuildScan extends Publisher {
             return false;
         }
 
-        if (!scanResponse.getBoolean("IsSuccess")){
+        if (!scanResponse.getBoolean("IsSuccess")) {
             log.println("Error: Response from " + ntoEntUrl + " came back not successful");
             return false;
         }
@@ -108,23 +119,23 @@ public class PostBuildScan extends Publisher {
 
         /* In a regular interval perform a check if the scan is done */
         String scanId = scanResponse.getJSONObject("Scan").getString("Id");
-        String scanStatus = ScanManagement.getScanStatus(ntoEntUrl,ntoEntApiKey,scanId).getString("Status");
+        String scanStatus = ScanManagement.getScanStatus(ntoEntUrl, ntoEntApiKey, scanId).getString("Status");
         log.println("Waiting for scan to complete");
-        while (!scanStatus.matches(SCAN_DONE_REGEX)){
+        while (!scanStatus.matches(SCAN_DONE_REGEX)) {
             log.println("Still waiting for scan to complete");
             try {
                 // Sleep for SLEEPTIME seconds
                 TimeUnit.SECONDS.sleep(SLEEPTIME);
-                ntoEntApiKey = Authentication.authenticate(ntoEntUrl,ntoLogin,ntoPassword);
-                scanStatus = ScanManagement.getScanStatus(ntoEntUrl,ntoEntApiKey,scanId).getString("Status");
+                ntoEntApiKey = Authentication.authenticate(ntoEntUrl, ntoLogin, ntoPassword);
+                scanStatus = ScanManagement.getScanStatus(ntoEntUrl, ntoEntApiKey, scanId).getString("Status");
                 log.println("Scan status is: " + scanStatus);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
 
-        scanResponse = ScanManagement.hasReport(ntoEntUrl,ntoEntApiKey,scanId);
-        if (!scanResponse.getBoolean("Result")){
+        scanResponse = ScanManagement.hasReport(ntoEntUrl, ntoEntApiKey, scanId);
+        if (!scanResponse.getBoolean("Result")) {
             log.println("No reports for this scan: " + scanId);
             return false;
         }
@@ -140,8 +151,9 @@ public class PostBuildScan extends Publisher {
 
         FilePath filePath = build.getWorkspace();
         log.println("Generating xml report to:" + filePath.getBaseName());
-        String xmlFile = ReportManagement.getVulnerabilitiesSummaryXml(ntoEntUrl,ntoEntApiKey,scanId);
-        SaveToFile(filePath.getParent() + "/" + filePath.getBaseName() + "/" + scanFilename + "_" + new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date()) + ".xml" , xmlFile);
+        String xmlFile = ReportManagement.getVulnerabilitiesSummaryXml(ntoEntUrl, ntoEntApiKey, scanId);
+        SaveToFile(filePath.getParent() + "/" + filePath.getBaseName() + "/" + scanFilename + "_" +
+                new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date()) + ".xml", xmlFile);
         log.println("Generating report done.");
         return true;
     }
@@ -149,7 +161,9 @@ public class PostBuildScan extends Publisher {
     private static void SaveToFile(String filename, String data) {
         File file = new File(filename);
         try {
-            if (!file.exists()) { file.createNewFile(); }
+            if (!file.exists()) {
+                file.createNewFile();
+            }
             BufferedWriter bw = new BufferedWriter(new FileWriter(file.getAbsolutePath()));
             bw.write(data);
             bw.close();
@@ -164,18 +178,20 @@ public class PostBuildScan extends Publisher {
     // If your plugin doesn't really define any property on Descriptor,
     // you don't have to do this.
     @Override
-    public DescriptorImp getDescriptor() { return (DescriptorImp)super.getDescriptor(); }
+    public DescriptorImp getDescriptor() {
+        return (DescriptorImp) super.getDescriptor();
+    }
 
     /**
      * Descriptor for {@link PostBuildScan}. Used as a singleton.
      * The class is marked as public so that it can be accessed from views.
-     *
+     * <p>
      * <p>
      * See <tt>src/main/resources/hudson/plugins/hello_world/HelloWorldBuilder/*.jelly</tt>
      * for the actual HTML fragment for the configuration screen.
      */
     @Extension
-    public static final class DescriptorImp extends Descriptor<Publisher>{
+    public static final class DescriptorImp extends Descriptor<Publisher> {
 
         private String ntoEntUrl;
         private String ntoEntApiKey;
@@ -183,19 +199,19 @@ public class PostBuildScan extends Publisher {
         private String ntoPassword;
         private String[] ntoConfigNames;
 
-        public DescriptorImp() { load(); }
+        public DescriptorImp() {
+            load();
+        }
 
         /**
          * Performs on-the-fly validation of the form field 'name'.
          *
-         * @param value
-         *      This parameter receives the value that the user has typed.
-         * @return
-         *      Indicates the outcome of the validation. This is sent to the browser.
-         *      <p>
-         *      Note that returning {@link FormValidation#error(String)} does not
-         *      prevent the form from being saved. It just means that a message
-         *      will be displayed to the user.
+         * @param value This parameter receives the value that the user has typed.
+         * @return Indicates the outcome of the validation. This is sent to the browser.
+         * <p>
+         * Note that returning {@link FormValidation#error(String)} does not
+         * prevent the form from being saved. It just means that a message
+         * will be displayed to the user.
          */
         public FormValidation doCheckNtoEntUrl(@QueryParameter String value)
                 throws IOException, ServletException {
@@ -219,20 +235,32 @@ public class PostBuildScan extends Publisher {
          * @return String
          */
         @Override
-        public String getDisplayName() { return "Publish Scan to NTOEnterprise"; }
+        public String getDisplayName() {
+            return "Publish Scan to NTOEnterprise";
+        }
 
         /**
          * @return
          */
-        public String getNtoEntUrl() { return ntoEntUrl; }
+        public String getNtoEntUrl() {
+            return ntoEntUrl;
+        }
 
-        public String getNtoEntApiKey() { return ntoEntApiKey; }
+        public String getNtoEntApiKey() {
+            return ntoEntApiKey;
+        }
 
-        public String getNtoLogin() {  return ntoLogin; }
+        public String getNtoLogin() {
+            return ntoLogin;
+        }
 
-        public String getNtoPassword() { return ntoPassword; }
+        public String getNtoPassword() {
+            return ntoPassword;
+        }
 
-        public String[] getNtoConfigNames() { return ntoConfigNames; }
+        public String[] getNtoConfigNames() {
+            return ntoConfigNames;
+        }
 
         @Override
         public boolean configure(StaplerRequest req, net.sf.json.JSONObject formData) throws FormException {
@@ -240,15 +268,15 @@ public class PostBuildScan extends Publisher {
             this.ntoEntApiKey = formData.getString("ntoEntApiKey");
             this.ntoLogin = formData.getString("ntoLogin");
             this.ntoPassword = formData.getString("ntoPassword");
-//          this.ntoConfigNames = getConfigNames();
             save();
             return super.configure(req, net.sf.json.JSONObject.fromObject(formData));
         }
 
-        public ListBoxModel doFillScanConfigItems(){
+        /**/
+        public ListBoxModel doFillScanConfigItems() {
             ntoConfigNames = getConfigNames();
             ListBoxModel items = new ListBoxModel();
-            for (int i = 0; i < ntoConfigNames.length; i++ ){
+            for (int i = 0; i < ntoConfigNames.length; i++) {
                 items.add(ntoConfigNames[i]);
             }
             return items;
@@ -261,7 +289,7 @@ public class PostBuildScan extends Publisher {
             if (ntoEntApiKey.isEmpty()) {
                 this.ntoEntApiKey = Authentication.authenticate(ntoEntUrl, ntoLogin, ntoPassword);
             }
-            String[] configNames = ScanConfiguration.getConfigNames(ntoEntUrl,ntoEntApiKey);
+            String[] configNames = ScanConfiguration.getConfigNames(ntoEntUrl, ntoEntApiKey);
             return configNames;
         }
     }
