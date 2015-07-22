@@ -26,18 +26,18 @@ Things that are needed to
 
 ### How to build the hpi file
 1. Clone the git repository
-```sh
-$ git clone git@github.com:nbugash-r7/jenkinspider.git
-```
+    ```sh
+    $ git clone git@github.com:nbugash-r7/jenkinspider.git
+    ```
 2. Change directory to the jenkinspider repository
-```sh
-$ cd jenkinspider
-```
+    ```sh
+    $ cd jenkinspider
+    ```
 3. A. Build the hpi file. For first time build run: 
-```sh
-$ mvn hpi:run
-```
-when the build is complete, kill the session by CTRL + C. For successive build:
-```sh
-$ mvn hpi:hpi
-```
+    ```sh
+    $ mvn hpi:run
+    ```
+    when the build is complete, kill the session by CTRL + C. For successive build:
+    ```sh
+    $ mvn hpi:hpi
+    ```
