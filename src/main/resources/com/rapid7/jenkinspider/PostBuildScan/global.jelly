@@ -20,8 +20,23 @@
     </f:entry>
     <f:validateButton
       title="Test Credentials" method="testCredentials" with="ntoEntUrl,ntoLogin,ntoPassword" />
-  </f:section>
+    <f:advanced>
+      <f:section title="Jira Advance Options" >
+      <f:entry field="jiraRestUrl" title="Jira Url">
+        <f:textbox />
+      </f:entry>
+      <f:entry field="jiraLogin" title="Jira Username">
+        <f:textbox />
+      </f:entry>
+      <f:entry field="jiraPassword" title="Jira Password">
+        <f:password />
+      </f:entry>
+      <f:validateButton
+        title="Test Credentials" method="testJiraCredentials" with="jiraRestUrl,jiraLogin,jiraPassword" />
+      </f:section>
+    </f:advanced>
 
+  </f:section>
 
 </f:section>
 </j:jelly>

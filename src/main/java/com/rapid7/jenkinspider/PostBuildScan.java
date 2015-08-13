@@ -205,13 +205,17 @@ public class PostBuildScan extends Publisher {
     @Extension
     public static final class DescriptorImp extends Descriptor<Publisher> {
 
-        private static int AUTHTOKEN_LENGTH = 584;
-
         private String ntoEntUrl;
         private String ntoEntApiKey;
         private String ntoLogin;
         private String ntoPassword;
         private String[] ntoConfigNames;
+
+        /* Advance Jira Options */
+
+        private String jiraRestUrl;
+        private String jiraLogin;
+        private String jiraPassword;
 
         public DescriptorImp() {
             load();
@@ -276,17 +280,29 @@ public class PostBuildScan extends Publisher {
             return ntoConfigNames;
         }
 
+        public String getJiraRestUrl() { return jiraRestUrl; }
+
+        public String getJiraLogin() { return jiraLogin; }
+
+        public String getJiraPassword() { return jiraPassword; }
+
         @Override
         public boolean configure(StaplerRequest req, net.sf.json.JSONObject formData) throws FormException {
             this.ntoEntUrl = formData.getString("ntoEntUrl");
             this.ntoEntApiKey = formData.getString("ntoEntApiKey");
             this.ntoLogin = formData.getString("ntoLogin");
             this.ntoPassword = formData.getString("ntoPassword");
+            this.jiraRestUrl = formData.getString("jiraRestUrl");
+            this.jiraLogin = formData.getString("jiraLogin");
+            this.jiraPassword = formData.getString("jiraPassword");
             save();
             return super.configure(req, net.sf.json.JSONObject.fromObject(formData));
         }
 
-        /**/
+        /*
+        * Method for populating the dropdown menu with
+        * all the available scan configs
+        * */
         public ListBoxModel doFillScanConfigItems() {
             ntoConfigNames = getConfigNames();
             ListBoxModel items = new ListBoxModel();
@@ -295,17 +311,34 @@ public class PostBuildScan extends Publisher {
             }
             return items;
         }
-
+        /*
+        * @param ntoRestUrl ntoLogin ntoPassword
+        *
+        * */
         public FormValidation doTestCredentials(@QueryParameter("ntoEntUrl") final String ntoRestUrl,
                                                 @QueryParameter("ntoLogin") final String ntoLogin,
                                                 @QueryParameter("ntoPassword") final String ntoPassword) {
             try {
                 String authToken = Authentication.authenticate(ntoRestUrl, ntoLogin, ntoPassword);
-                if (!authToken.equals(null) && authToken.length() == AUTHTOKEN_LENGTH) {
-                    return FormValidation.ok("Connected Successfully.");
-                } else {
+                if (authToken.equals(null)) {
                     return FormValidation.error("Invalid username / password combination");
+                } else {
+                    return FormValidation.ok("Connected Successfully.");
                 }
+            } catch (NullPointerException e) {
+                return FormValidation.error("Invalid username / password combination");
+            }
+
+        }
+
+        /*
+        * @param jiraRestUrl jiraLogin jiraPassword
+        * */
+        public FormValidation doTestJiraCredentials(@QueryParameter("jiraRestUrl") final String jiraRestUrl,
+                                                    @QueryParameter("jiraLogin") final String jiraLogin,
+                                                    @QueryParameter("jiraPassword") final String jiraPassword) {
+            try {
+                return FormValidation.error("Not yet implemented");
             } catch (NullPointerException e) {
                 return FormValidation.error("Invalid username / password combination");
             }
@@ -322,6 +355,7 @@ public class PostBuildScan extends Publisher {
             String[] configNames = ScanConfiguration.getConfigNames(ntoEntUrl, ntoEntApiKey);
             return configNames;
         }
+
     }
 
 }
