@@ -163,7 +163,7 @@ public class PostBuildScan extends Publisher {
         log.println("Generating xml report to:" + filePath.getBaseName());
         String xmlFile = ReportManagement.getVulnerabilitiesSummaryXml(ntoEntUrl, ntoEntApiKey, scanId);
 
-        /* Saving the Re*/
+        /* Saving the Report*/
         SaveToFile(filePath.getParent() + "/" + filePath.getBaseName() + "/" + scanFilename + "_" +
                 new SimpleDateFormat("yyyy.MM.dd_HH.mm.ss").format(new Date()) + ".xml", xmlFile);
         log.println("Generating report done.");

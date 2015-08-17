@@ -145,6 +145,40 @@ public class Base {
         return null;
     }
 
+
+    public static Object post(String apiCall, String authToken, Map<String, String> params, String contentType) {
+        try {
+            HttpClient httpClient = HttpClientBuilder.create().build();
+
+            HttpPost postRequest = new HttpPost(apiCall);
+
+            postRequest.addHeader("Content-Type", contentType);
+            postRequest.addHeader("Authorization", "Basic " + authToken);
+
+            if (!params.equals(null)) {
+                ArrayList<BasicNameValuePair> urlParameters = new ArrayList<BasicNameValuePair>();
+                for (Map.Entry<String, String> entry : params.entrySet()) {
+                    urlParameters.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
+                }
+                postRequest.setEntity(new UrlEncodedFormEntity(urlParameters));
+            }
+
+            HttpResponse postResponse = httpClient.execute(postRequest);
+            int statusCode = postResponse.getStatusLine().getStatusCode();
+            if (statusCode == SUCCESS) {
+                return getClassType(postResponse);
+            } else {
+                throw new RuntimeException("Failed! HTTP error code: " + statusCode);
+            }
+
+        } catch (ClientProtocolException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     /**
      * @param apiCall
      * @param authToken
@@ -183,7 +217,6 @@ public class Base {
         }
         return null;
     }
-
     /**
      * @param response
      * @return

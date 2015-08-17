@@ -22,5 +22,25 @@
     <f:entry field="generateReport" title="Obtain the report after the scan finished?">
       <f:checkbox checked="true" />
     </f:entry>
+
+    <!--
+      Create an advance section to create new scan config.
+      No need to go to the NTO Enterprise site
+    -->
+
+    <f:advanced>
+      <f:section title="NTO Enterprise Advance Options" >
+        <f:entry field="scanConfigName" title="Name">
+          <f:textbox />
+        </f:entry>
+        <f:entry field="scanConfigUrl" title="Url">
+          <f:textbox />
+        </f:entry>
+        <f:entry field="scanConfigEngineGroupId" title="Scan Engine Group">
+          <f:password />
+        </f:entry>
+       </f:section>
+    </f:advanced>
+
   </f:section>
 </j:jelly>

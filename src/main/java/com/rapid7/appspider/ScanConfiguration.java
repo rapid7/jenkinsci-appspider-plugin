@@ -3,6 +3,17 @@ package com.rapid7.appspider;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import freemarker.template.Configuration;
+import freemarker.template.Template;
+import freemarker.template.TemplateException;
+
+import java.io.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
+
+
 /**
  * Created by nbugash on 08/07/15.
  */
@@ -42,5 +53,67 @@ public class ScanConfiguration extends Base {
             configNames[i] = jsonConfigs.getJSONObject(i).getString("Name");
         }
         return configNames;
+    }
+
+    /**
+     * @param restUrl
+     * @param authToken
+     * @param name
+     * @param str_url
+     * @param engineGroupId
+     * @return
+     * @throws MalformedURLException
+     */
+    public static JSONObject saveConfig(String restUrl, String authToken,
+                                        String name, String str_url,
+                                        String engineGroupId) {
+        try {
+            Map<String, String> data = new HashMap<String, String>();
+            data.put("name", name);
+
+            URL url = new URL(str_url);
+            data.put("url",url.toString());
+
+            URL url_wildcard_path;
+            URL url_wildcard_subdomain;
+            if(url.getAuthority().endsWith("/")) {
+                url_wildcard_path = new URL(url.toString()+"*");
+                url_wildcard_subdomain = new URL(url.getProtocol() +
+                        "://*." + url.getAuthority() + "*");
+            } else {
+                url_wildcard_path = new URL(url.toString()+"/*");
+                url_wildcard_subdomain = new URL(url.getProtocol() +
+                        "://*." + url.getAuthority() + "/*");
+            }
+            data.put("url_wildcard_path", url_wildcard_path.toString());
+            data.put("url_wildcard_subdomain", url_wildcard_subdomain.toString());
+
+            StringWriter scanConfigXML = new StringWriter();
+            scanConfigXML.flush();
+            Template template = new Configuration().getTemplate(
+                    "src/main/java/com/rapid7/appspider/template/scanConfigTemplate.ftl");
+            template.process(data, scanConfigXML);
+
+            /* Continue with the api call*/
+            String apiCall = restUrl + SAVECONFIG;
+            Map<String, String> params = new HashMap<String, String>();
+            String str_scanConfigXML = scanConfigXML.toString();
+            params.put("xml", str_scanConfigXML);
+            params.put("name",name);
+            params.put("engineGroupId", engineGroupId);
+            Object response = post(apiCall, authToken, params, "application/json");
+            if (response.getClass().equals(JSONObject.class)) {
+                return (JSONObject) response;
+            }
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (TemplateException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+        return null;
     }
 }
