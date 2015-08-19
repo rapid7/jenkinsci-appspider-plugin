@@ -8,6 +8,7 @@ import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
@@ -15,7 +16,8 @@ import org.json.*;
 
 import javax.ws.rs.core.MediaType;
 import java.io.*;
-import java.net.URISyntaxException;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
@@ -146,32 +148,34 @@ public class Base {
     }
 
 
-    public static Object post(String apiCall, String authToken, Map<String, String> params, String contentType) {
+    /**
+     * @param apiCall
+     * @param authToken
+     * @param jsonObject
+     * @return
+     */
+    public static Object post(String apiCall, String authToken, JSONObject jsonObject ) {
+        String charset = StandardCharsets.UTF_8.name();
         try {
-            HttpClient httpClient = HttpClientBuilder.create().build();
-
-            HttpPost postRequest = new HttpPost(apiCall);
-
-            postRequest.addHeader("Content-Type", contentType);
-            postRequest.addHeader("Authorization", "Basic " + authToken);
-
-            if (!params.equals(null)) {
-                ArrayList<BasicNameValuePair> urlParameters = new ArrayList<BasicNameValuePair>();
-                for (Map.Entry<String, String> entry : params.entrySet()) {
-                    urlParameters.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
-                }
-                postRequest.setEntity(new UrlEncodedFormEntity(urlParameters));
-            }
-
-            HttpResponse postResponse = httpClient.execute(postRequest);
-            int statusCode = postResponse.getStatusLine().getStatusCode();
-            if (statusCode == SUCCESS) {
-                return getClassType(postResponse);
-            } else {
-                throw new RuntimeException("Failed! HTTP error code: " + statusCode);
-            }
-
-        } catch (ClientProtocolException e) {
+            String query = String.format("{" +
+                    "DefendEnabled: true, \n" +
+                    "MonitoringDelay: 0, \n" +
+                    "Id: null, \n"+
+                    "Name: %s, \n" +
+                    "EngineGroupId: %s, \n" +
+                    "Monitoring: true, \n"+
+                    "IsApproveRequired: false,\n" +
+                    "Xml: %s,\n "+
+                    "}",
+                    URLEncoder.encode(jsonObject.getString("name"),charset),
+                    URLEncoder.encode(jsonObject.getString("engineGroupId"),charset),
+                    URLEncoder.encode(jsonObject.getString("scanconfigXML"),charset));
+            URLConnection connection = new URL(apiCall).openConnection();
+            connection.setDoInput(true); // Triggers POST
+            connection.setRequestProperty("Accept-Charset",charset);
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        } catch (MalformedURLException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();

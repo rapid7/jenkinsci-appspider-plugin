@@ -1,0 +1,10 @@
+{
+    "DefendEnabled":${defendEnabled},
+    "MonitoringDelay":${monitoringDelay},
+    "Id":${id},
+    "Name":${name},
+    "EngineGroupId":${engineGroupId},
+    "Monitoring":${monitoring},
+    "IsApproveRequired":${isApproveRequired},
+    "Xml":${scanconfigxml}
+}

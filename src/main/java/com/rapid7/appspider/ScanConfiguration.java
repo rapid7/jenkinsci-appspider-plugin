@@ -98,10 +98,18 @@ public class ScanConfiguration extends Base {
             String apiCall = restUrl + SAVECONFIG;
             Map<String, String> params = new HashMap<String, String>();
             String str_scanConfigXML = scanConfigXML.toString();
-            params.put("xml", str_scanConfigXML);
-            params.put("name",name);
-            params.put("engineGroupId", engineGroupId);
-            Object response = post(apiCall, authToken, params, "application/json");
+
+
+            /* Setup the JSONObject request body */
+
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.append("xml",scanConfigXML);
+            jsonObject.append("name",name);
+            jsonObject.append("engineGroupId",engineGroupId);
+
+
+
+            Object response = post(apiCall, authToken, jsonObject);
             if (response.getClass().equals(JSONObject.class)) {
                 return (JSONObject) response;
             }
