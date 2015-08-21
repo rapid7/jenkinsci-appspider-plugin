@@ -10,7 +10,7 @@
     When submitted, it will be passed to the corresponding constructor parameter.
   -->
   <f:section>
-    <f:entry field="scanConfig" title="Scan Configuration Name">
+    <f:entry field="configName" title="Scan Configuration Name">
       <f:select />
     </f:entry>
     <f:entry field="scanFilename" title="Scan Filename" >
@@ -30,15 +30,18 @@
 
     <f:advanced>
       <f:section title="Create new scan configuration" >
+        <f:entry field="disclaimer" title="Note: This will overwrite your current scan config selection"> <f:label /> </f:entry>
         <f:entry field="scanConfigName" title="Name">
-          <f:textbox />
+          <f:textbox default=""/>
         </f:entry>
         <f:entry field="scanConfigUrl" title="Url">
-          <f:textbox />
+          <f:textbox default=""/>
         </f:entry>
         <f:entry field="scanConfigEngineGroupName" title="Scan Engine Group">
           <f:select />
         </f:entry>
+        <f:validateButton
+          title="Test Url" method="testUrl" with="scanConfigUrl" />
        </f:section>
     </f:advanced>
 

@@ -11,6 +11,7 @@ import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Publisher;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import org.apache.commons.validator.UrlValidator;
 import org.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -18,10 +19,11 @@ import org.kohsuke.stapler.StaplerRequest;
 
 import javax.servlet.ServletException;
 import java.io.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import com.rapid7.appspider.*;
@@ -34,23 +36,27 @@ import static java.lang.Thread.sleep;
 public class PostBuildScan extends Publisher {
 
     private final int SLEEPTIME = 90; //seconds
-    private final String SCAN_DONE_REGEX = "Completed|Stopped";
+    private final String SCAN_DONE_REGEX = "Completed|Stopped|Paused|Blackouted|" +
+            "Hanged|Failed|Vuln Load Failed|Download failed|ReportError";
+    private final String SUCCESSFUL_SCAN = "Completed|Stopped";
 
-    private final String scanConfig;
+    private String configName;  // Not set to final since it may change
+                                // if user decided to create a new scan config
+
     private final String scanFilename;
     private final Boolean enableScan;
     private final Boolean generateReport;
 
-    private final String scanConfigName;
-    private final String scanConfigUrl;
-    private final String scanConfigEngineGroupName;
+    private String scanConfigName;
+    private String scanConfigUrl;
+    private String scanConfigEngineGroupName;
 
     @DataBoundConstructor
-    public PostBuildScan(String scanConfig, String scanFilename,
+    public PostBuildScan(String configName, String scanFilename,
                          Boolean enableScan, Boolean generateReport,
                          String scanConfigName, String scanConfigUrl,
-                         String scanConfigEngineGroupName) {
-        this.scanConfig = scanConfig;
+                         String scanConfigEngineGroupName ) {
+        this.configName = configName;
         this.scanFilename = scanFilename;
         this.enableScan = enableScan;
         this.generateReport = generateReport;
@@ -68,8 +74,8 @@ public class PostBuildScan extends Publisher {
     /*
     *  This will be used from the config.jelly
     * */
-    public String getScanConfig() {
-        return scanConfig;
+    public String getConfigName() {
+        return configName;
     }
 
     public String getScanFilename() {
@@ -84,14 +90,14 @@ public class PostBuildScan extends Publisher {
         return generateReport;
     }
 
-    public String getScanConfigName() {
-        return scanConfigName;
-    }
-
-    public String getScanConfigUrl() {
-        return scanConfigUrl;
-    }
-
+//    public String getScanConfigName() {
+//        return scanConfigName;
+//    }
+//
+//    public String getScanConfigUrl() {
+//        return scanConfigUrl;
+//    }
+//
     public String getScanConfigEngineGroupName() {
         return scanConfigEngineGroupName;
     }
@@ -106,7 +112,7 @@ public class PostBuildScan extends Publisher {
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
         PrintStream log = listener.getLogger();
         String ntoEntUrl = getDescriptor().getNtoEntUrl();
-        String ntoEntApiKey = getDescriptor().getNtoEntApiKey();
+        String ntoEntApiKey = null;
         String ntoLogin = getDescriptor().getNtoLogin();
         String ntoPassword = getDescriptor().getNtoPassword();
 
@@ -114,12 +120,8 @@ public class PostBuildScan extends Publisher {
         log.println("Value of NTOEnterprise Server API Key: [FILTERED]");
         log.println("Value of NTOEnterprise Login: " + ntoLogin);
         log.println("Value of NTOEnterprise Password: [FILTERED]");
-        log.println("Value of Scan Configuration name: " + scanConfig);
+        log.println("Value of Scan Configuration name: " + configName);
         log.println("Value of Scan Filename: " + scanFilename);
-        log.println("Value of Scan Config Name: " + scanConfigName);
-        log.println("Value of Scan Config URL: " + scanConfigUrl);
-        log.println("Value of Scan Config Engine name: " + scanConfigEngineGroupName);
-
 
         // Don't perform a scan
         if (!enableScan) {
@@ -130,16 +132,34 @@ public class PostBuildScan extends Publisher {
         /*
         * Check if we need an authentication token
         * */
-        if (ntoEntApiKey.isEmpty()) {
+        if (ntoEntApiKey == null || ntoEntApiKey.isEmpty()) {
             // We need to get the authToken
             ntoEntApiKey = Authentication.authenticate(ntoEntUrl, ntoLogin, ntoPassword);
+        }
+
+        if (isANewScanConfig()) {
+            log.println("Value of Scan Config Name: " + scanConfigName);
+            log.println("Value of Scan Config URL: " + scanConfigUrl);
+            log.println("Value of Scan Config Engine Group name: " + scanConfigEngineGroupName);
+
+            /* Need to indicate to the user that we are going to overwrite the existing scan config */
+
+            /* Create a new scan config */
+            String engineGroupId = ScanEngineGroup.getEngineGroupIdFromName(ntoEntUrl, ntoEntApiKey, scanConfigEngineGroupName);
+            ScanConfiguration.saveConfig(ntoEntUrl, ntoEntApiKey, scanConfigName, scanConfigUrl, engineGroupId);
+            log.println("Successfully created the scan config " + scanConfigName);
+
+            // Set the configName to the new created scan config
+            configName = scanConfigName;
+            log.println("Value of Scan Configuration name: " + configName);
+
         }
 
         /*
         * (1) Execute the scan
         * (2) Obtain the response from the NTOEnterprise Server
         * */
-        JSONObject scanResponse = ScanManagement.runScanByConfigName(ntoEntUrl, ntoEntApiKey, scanConfig);
+        JSONObject scanResponse = ScanManagement.runScanByConfigName(ntoEntUrl, ntoEntApiKey, configName);
 
         /*
         * Check if a malformed response was received from the server
@@ -186,11 +206,16 @@ public class PostBuildScan extends Publisher {
         scanResponse = ScanManagement.hasReport(ntoEntUrl, ntoEntApiKey, scanId);
         if (!scanResponse.getBoolean("Result")) {
             log.println("No reports for this scan: " + scanId);
-            return false;
         }
 
         log.println("Scan completed!");
 
+        if (!scanStatus.matches(SUCCESSFUL_SCAN)) {
+            log.println("Scan completed but not successful.");
+            return true;
+        }
+
+        /* Scan completed with either a 'Complete' or 'Stopped' status */
         FilePath filePath = build.getWorkspace();
         log.println("Generating xml report to:" + filePath.getBaseName());
         String xmlFile = ReportManagement.getVulnerabilitiesSummaryXml(ntoEntUrl, ntoEntApiKey, scanId);
@@ -199,6 +224,7 @@ public class PostBuildScan extends Publisher {
         SaveToFile(filePath.getParent() + "/" + filePath.getBaseName() + "/" + scanFilename + "_" +
                 new SimpleDateFormat("yyyy.MM.dd_HH.mm.ss").format(new Date()) + ".xml", xmlFile);
         log.println("Generating report done.");
+
         return true;
     }
 
@@ -207,7 +233,7 @@ public class PostBuildScan extends Publisher {
      * @param filename
      * @param data
      */
-    private static void SaveToFile(String filename, String data) {
+    private void SaveToFile(String filename, String data) {
         File file = new File(filename);
         try {
             if (!file.exists()) {
@@ -221,6 +247,11 @@ public class PostBuildScan extends Publisher {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private boolean isANewScanConfig() {
+        return (!(scanConfigName == null || scanConfigName.isEmpty()) &&
+                !(scanConfigUrl  == null || scanConfigUrl.isEmpty()));
     }
 
     // Overridden for better type safety.
@@ -257,6 +288,7 @@ public class PostBuildScan extends Publisher {
         private String jiraPassword;
 
         public DescriptorImp() {
+
             load();
         }
 
@@ -334,9 +366,10 @@ public class PostBuildScan extends Publisher {
          * all the available scan configs
          * @return
          */
-        public ListBoxModel doFillScanConfigItems() {
+        public ListBoxModel doFillConfigNameItems() {
             scanConfigNames = getConfigNames();
             ListBoxModel items = new ListBoxModel();
+            items.add("[Select a scan config name]"); // Adding a default "Pick a scan configuration" entry
             for (int i = 0; i < scanConfigNames.length; i++) {
                 items.add(scanConfigNames[i]);
             }
@@ -351,6 +384,7 @@ public class PostBuildScan extends Publisher {
         public ListBoxModel doFillScanConfigEngineGroupNameItems() {
             scanConfigEngines = getEngineGroups();
             ListBoxModel items = new ListBoxModel();
+            items.add("[Select an engine group name]"); // Adding a default "Pick a engine group name" entry
             for (int i = 0; i < scanConfigEngines.length; i++ ) {
                 items.add(scanConfigEngines[i]);
             }
@@ -388,13 +422,34 @@ public class PostBuildScan extends Publisher {
          */
         public FormValidation doTestJiraCredentials(@QueryParameter("jiraRestUrl") final String jiraRestUrl,
                                                     @QueryParameter("jiraLogin") final String jiraLogin,
-                                                    @QueryParameter("jiraPassword") final String jiraPassword) {
+                                                    @QueryParameter("jiraPassword") final String jiraPassword ) {
             try {
                 return FormValidation.error("Not yet implemented");
             } catch (NullPointerException e) {
                 return FormValidation.error("Invalid username / password combination");
             }
 
+        }
+
+        public FormValidation doTestUrl(@QueryParameter("scanConfigUrl") final String scanConfigUrl) {
+            try {
+                if (new UrlValidator().isValid(scanConfigUrl)) {
+                    URL url = new URL(scanConfigUrl);
+                    URLConnection conn = url.openConnection();
+                    conn.connect();
+                    return FormValidation.ok("'" + scanConfigUrl + "' is a valid url");
+                } else {
+                    return FormValidation.error("Invalid url. Check the protocol. For example: 'http://"+scanConfigUrl+"'");
+                }
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+                return FormValidation.error("Unable to connect to \"" + scanConfigUrl +"\". Try again in a few mins or " +
+                        "try another url");
+            } catch (IOException e) {
+                e.printStackTrace();
+                return FormValidation.error("Unable to connect to \"" + scanConfigUrl +"\". Try again in a few mins or " +
+                        "try another url");
+            }
         }
 
         /**

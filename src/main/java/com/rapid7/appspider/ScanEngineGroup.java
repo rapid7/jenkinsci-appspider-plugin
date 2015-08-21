@@ -46,14 +46,14 @@ public class ScanEngineGroup extends Base {
     /**
      * @param restUrl
      * @param authToken
-     * @return
+     * @return String[] of all the engine groups for a specific client
      */
     public static String[] getEngineNamesGroupsForClient(String restUrl, String authToken) {
-        Map<String,String> response = getEngineGroupsForClient(restUrl,authToken);
+        Map<String,String> response = getEngineGroupsForClient(restUrl, authToken);
         if(response.getClass().equals(HashMap.class)) {
             ArrayList<String> list = new ArrayList<String>();
             for(Map.Entry<String,String> entry: response.entrySet()) {
-                list.add(entry.getValue());
+                list.add(entry.getKey());
             }
             String[] engineNames = new String[list.size()];
             return list.toArray(engineNames);
@@ -61,14 +61,24 @@ public class ScanEngineGroup extends Base {
         return null;
     }
 
+    public static String getEngineGroupIdFromName(String restUrl, String authToken, String engineGroupName) {
+        Map<String,String> engines = getAllEngineGroups(restUrl,authToken);
+        return engines.get(engineGroupName);
+    }
 
+    /**
+     * Helper method for getEngineGroupsForClient and getAllEngineGroups
+     * @param jsonObject
+     * @return HashMap with key being the name of the engine group and the value being the engine group id
+     * <b>Assumption: 1-to-1 relationship between the engine group name and engine group id</b>
+     */
     private static Map<String, String> scanEngineGroup(JSONObject jsonObject) {
         Map<String,String> engines = new HashMap<String, String>();
         JSONArray engineGroups = jsonObject.getJSONArray("EngineGroups");
         for (int i = 0; i < engineGroups.length(); i++ ) {
             String engine_id = engineGroups.getJSONObject(i).getString("Id");
             String engine_name = engineGroups.getJSONObject(i).getString("Name");
-            engines.put(engine_id,engine_name);
+            engines.put(engine_name, engine_id);
         }
         return engines;
     }
