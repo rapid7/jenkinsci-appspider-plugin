@@ -29,15 +29,15 @@
     -->
 
     <f:advanced>
-      <f:section title="NTO Enterprise Advance Options" >
+      <f:section title="Create new scan configuration" >
         <f:entry field="scanConfigName" title="Name">
           <f:textbox />
         </f:entry>
         <f:entry field="scanConfigUrl" title="Url">
           <f:textbox />
         </f:entry>
-        <f:entry field="scanConfigEngineGroupId" title="Scan Engine Group">
-          <f:password />
+        <f:entry field="scanConfigEngineGroupName" title="Scan Engine Group">
+          <f:select />
         </f:entry>
        </f:section>
     </f:advanced>

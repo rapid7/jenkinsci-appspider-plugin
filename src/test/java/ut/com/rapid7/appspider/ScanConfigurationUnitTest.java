@@ -22,9 +22,9 @@ public class ScanConfigurationUnitTest extends BaseUnitTest {
     public void saveConfig() {
         String restUrl = getRestUrl();
         String authToken = getAuthToken();
-        String name = "new_scan_config";
-        String str_url = "http://examplesite.com";
-        String engineGroupId = "9938563e-469c-4c75-963d-37ebe4113f62";
+        String name = "NicoTest2";
+        String str_url = "http://www.webscantest.com";
+        String engineGroupId = "51b6553a-ca34-4bf6-960a-f08d15597d07";
         Object config = ScanConfiguration.saveConfig(restUrl, authToken,
                 name, str_url, engineGroupId);
         assertEquals(JSONObject.class, config.getClass());

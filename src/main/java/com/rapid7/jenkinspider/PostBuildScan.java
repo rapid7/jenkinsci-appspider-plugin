@@ -19,7 +19,9 @@ import org.kohsuke.stapler.StaplerRequest;
 import javax.servlet.ServletException;
 import java.io.*;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import com.rapid7.appspider.*;
@@ -39,15 +41,24 @@ public class PostBuildScan extends Publisher {
     private final Boolean enableScan;
     private final Boolean generateReport;
 
+    private final String scanConfigName;
+    private final String scanConfigUrl;
+    private final String scanConfigEngineGroupName;
 
     @DataBoundConstructor
     public PostBuildScan(String scanConfig, String scanFilename,
-                         Boolean enableScan, Boolean generateReport) {
+                         Boolean enableScan, Boolean generateReport,
+                         String scanConfigName, String scanConfigUrl,
+                         String scanConfigEngineGroupName) {
         this.scanConfig = scanConfig;
         this.scanFilename = scanFilename;
         this.enableScan = enableScan;
         this.generateReport = generateReport;
+        this.scanConfigName = scanConfigName;
+        this.scanConfigUrl = scanConfigUrl;
+        this.scanConfigEngineGroupName = scanConfigEngineGroupName;
     }
+
 
     @Override
     public BuildStepMonitor getRequiredMonitorService() {
@@ -73,6 +84,24 @@ public class PostBuildScan extends Publisher {
         return generateReport;
     }
 
+    public String getScanConfigName() {
+        return scanConfigName;
+    }
+
+    public String getScanConfigUrl() {
+        return scanConfigUrl;
+    }
+
+    public String getScanConfigEngineGroupName() {
+        return scanConfigEngineGroupName;
+    }
+
+    /**
+     * @param build
+     * @param launcher
+     * @param listener
+     * @return
+     */
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
         PrintStream log = listener.getLogger();
@@ -87,6 +116,9 @@ public class PostBuildScan extends Publisher {
         log.println("Value of NTOEnterprise Password: [FILTERED]");
         log.println("Value of Scan Configuration name: " + scanConfig);
         log.println("Value of Scan Filename: " + scanFilename);
+        log.println("Value of Scan Config Name: " + scanConfigName);
+        log.println("Value of Scan Config URL: " + scanConfigUrl);
+        log.println("Value of Scan Config Engine name: " + scanConfigEngineGroupName);
 
 
         // Don't perform a scan
@@ -170,6 +202,11 @@ public class PostBuildScan extends Publisher {
         return true;
     }
 
+    /**
+     *
+     * @param filename
+     * @param data
+     */
     private static void SaveToFile(String filename, String data) {
         File file = new File(filename);
         try {
@@ -194,6 +231,7 @@ public class PostBuildScan extends Publisher {
         return (DescriptorImp) super.getDescriptor();
     }
 
+
     /**
      * Descriptor for {@link PostBuildScan}. Used as a singleton.
      * The class is marked as public so that it can be accessed from views.
@@ -209,7 +247,8 @@ public class PostBuildScan extends Publisher {
         private String ntoEntApiKey;
         private String ntoLogin;
         private String ntoPassword;
-        private String[] ntoConfigNames;
+        private String[] scanConfigNames;
+        private String[] scanConfigEngines;
 
         /* Advance Jira Options */
 
@@ -257,28 +296,19 @@ public class PostBuildScan extends Publisher {
             return "Publish Scan to NTOEnterprise";
         }
 
-        /**
-         * @return
-         */
         public String getNtoEntUrl() {
             return ntoEntUrl;
         }
 
-        public String getNtoEntApiKey() {
-            return ntoEntApiKey;
-        }
+        public String getNtoEntApiKey() { return ntoEntApiKey; }
 
-        public String getNtoLogin() {
-            return ntoLogin;
-        }
+        public String getNtoLogin() { return ntoLogin; }
 
-        public String getNtoPassword() {
-            return ntoPassword;
-        }
+        public String getNtoPassword() { return ntoPassword; }
 
-        public String[] getNtoConfigNames() {
-            return ntoConfigNames;
-        }
+        public String[] getScanConfigNames() { return scanConfigNames; }
+
+        public String[] getScanConfigEngines() { return scanConfigEngines; }
 
         public String getJiraRestUrl() { return jiraRestUrl; }
 
@@ -299,22 +329,40 @@ public class PostBuildScan extends Publisher {
             return super.configure(req, net.sf.json.JSONObject.fromObject(formData));
         }
 
-        /*
-        * Method for populating the dropdown menu with
-        * all the available scan configs
-        * */
+        /**
+         * Method for populating the dropdown menu with
+         * all the available scan configs
+         * @return
+         */
         public ListBoxModel doFillScanConfigItems() {
-            ntoConfigNames = getConfigNames();
+            scanConfigNames = getConfigNames();
             ListBoxModel items = new ListBoxModel();
-            for (int i = 0; i < ntoConfigNames.length; i++) {
-                items.add(ntoConfigNames[i]);
+            for (int i = 0; i < scanConfigNames.length; i++) {
+                items.add(scanConfigNames[i]);
             }
             return items;
         }
-        /*
-        * @param ntoRestUrl ntoLogin ntoPassword
-        *
-        * */
+
+        /**
+         * Method for populating the dropdown menu with
+         * all the available scan engine groups
+         * @return
+         */
+        public ListBoxModel doFillScanConfigEngineGroupNameItems() {
+            scanConfigEngines = getEngineGroups();
+            ListBoxModel items = new ListBoxModel();
+            for (int i = 0; i < scanConfigEngines.length; i++ ) {
+                items.add(scanConfigEngines[i]);
+            }
+            return items;
+        }
+
+        /**
+         * @param ntoRestUrl
+         * @param ntoLogin
+         * @param ntoPassword
+         * @return
+         */
         public FormValidation doTestCredentials(@QueryParameter("ntoEntUrl") final String ntoRestUrl,
                                                 @QueryParameter("ntoLogin") final String ntoLogin,
                                                 @QueryParameter("ntoPassword") final String ntoPassword) {
@@ -331,9 +379,13 @@ public class PostBuildScan extends Publisher {
 
         }
 
-        /*
-        * @param jiraRestUrl jiraLogin jiraPassword
-        * */
+        /**
+         *
+         * @param jiraRestUrl
+         * @param jiraLogin
+         * @param jiraPassword
+         * @return
+         */
         public FormValidation doTestJiraCredentials(@QueryParameter("jiraRestUrl") final String jiraRestUrl,
                                                     @QueryParameter("jiraLogin") final String jiraLogin,
                                                     @QueryParameter("jiraPassword") final String jiraPassword) {
@@ -352,8 +404,17 @@ public class PostBuildScan extends Publisher {
             if (ntoEntApiKey.isEmpty()) {
                 this.ntoEntApiKey = Authentication.authenticate(ntoEntUrl, ntoLogin, ntoPassword);
             }
-            String[] configNames = ScanConfiguration.getConfigNames(ntoEntUrl, ntoEntApiKey);
-            return configNames;
+            return ScanConfiguration.getConfigNames(ntoEntUrl, ntoEntApiKey);
+        }
+
+        /**
+         * @return
+         */
+        private String[] getEngineGroups() {
+            if (ntoEntApiKey.isEmpty()) {
+                this.ntoEntApiKey = Authentication.authenticate(ntoEntUrl, ntoLogin, ntoPassword);
+            }
+            return ScanEngineGroup.getEngineNamesGroupsForClient(ntoEntUrl,ntoEntApiKey);
         }
 
     }

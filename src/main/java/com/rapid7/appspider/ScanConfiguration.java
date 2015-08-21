@@ -89,27 +89,29 @@ public class ScanConfiguration extends Base {
             data.put("url_wildcard_subdomain", url_wildcard_subdomain.toString());
 
             StringWriter scanConfigXML = new StringWriter();
-            scanConfigXML.flush();
             Template template = new Configuration().getTemplate(
                     "src/main/java/com/rapid7/appspider/template/scanConfigTemplate.ftl");
             template.process(data, scanConfigXML);
 
             /* Continue with the api call*/
             String apiCall = restUrl + SAVECONFIG;
-            Map<String, String> params = new HashMap<String, String>();
-            String str_scanConfigXML = scanConfigXML.toString();
 
 
-            /* Setup the JSONObject request body */
+            /* Setup the HashMap request body */
 
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.append("xml",scanConfigXML);
-            jsonObject.append("name",name);
-            jsonObject.append("engineGroupId",engineGroupId);
+            HashMap<String,String> params = new HashMap<String, String>();
+            params.put("defendEnabled","true");
+            params.put("monitoringDelay","0");
+            params.put("monitoringTriggerScan","true");
+            params.put("id","null");
+            params.put("name",name);
+            params.put("clientId","null");
+            params.put("engineGroupId",engineGroupId);
+            params.put("monitoring", "true");
+            params.put("isApproveRequired", "false");
+            params.put("scanconfigxml", scanConfigXML.toString());
 
-
-
-            Object response = post(apiCall, authToken, jsonObject);
+            Object response = post(apiCall, authToken, params);
             if (response.getClass().equals(JSONObject.class)) {
                 return (JSONObject) response;
             }

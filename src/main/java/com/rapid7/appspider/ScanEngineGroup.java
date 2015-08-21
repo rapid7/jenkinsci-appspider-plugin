@@ -4,6 +4,7 @@ package com.rapid7.appspider;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -38,6 +39,24 @@ public class ScanEngineGroup extends Base {
         Object response = get(apiCall,authToken);
         if (response.getClass().equals(JSONObject.class)){
             return scanEngineGroup((JSONObject)response);
+        }
+        return null;
+    }
+
+    /**
+     * @param restUrl
+     * @param authToken
+     * @return
+     */
+    public static String[] getEngineNamesGroupsForClient(String restUrl, String authToken) {
+        Map<String,String> response = getEngineGroupsForClient(restUrl,authToken);
+        if(response.getClass().equals(HashMap.class)) {
+            ArrayList<String> list = new ArrayList<String>();
+            for(Map.Entry<String,String> entry: response.entrySet()) {
+                list.add(entry.getValue());
+            }
+            String[] engineNames = new String[list.size()];
+            return list.toArray(engineNames);
         }
         return null;
     }
