@@ -36,9 +36,9 @@ import static java.lang.Thread.sleep;
 public class PostBuildScan extends Publisher {
 
     private final int SLEEPTIME = 90; //seconds
-    private final String SCAN_DONE_REGEX = "Completed|Stopped|Paused|Blackouted|" +
-            "Hanged|Failed|Vuln Load Failed|Download failed|ReportError";
     private final String SUCCESSFUL_SCAN = "Completed|Stopped";
+    private final String UNSUCCESSFUL_SCAN = "ReportError";
+    private final String FINISHED_SCANNING = SUCCESSFUL_SCAN + "|" + UNSUCCESSFUL_SCAN;
 
     private String configName;  // Not set to final since it may change
                                 // if user decided to create a new scan config
@@ -90,14 +90,6 @@ public class PostBuildScan extends Publisher {
         return generateReport;
     }
 
-//    public String getScanConfigName() {
-//        return scanConfigName;
-//    }
-//
-//    public String getScanConfigUrl() {
-//        return scanConfigUrl;
-//    }
-//
     public String getScanConfigEngineGroupName() {
         return scanConfigEngineGroupName;
     }
@@ -153,6 +145,9 @@ public class PostBuildScan extends Publisher {
             configName = scanConfigName;
             log.println("Value of Scan Configuration name: " + configName);
 
+            /* Reset scanConfigName and scanConfigUrl */
+            scanConfigName = null;
+            scanConfigUrl = null;
         }
 
         /*
@@ -187,31 +182,31 @@ public class PostBuildScan extends Publisher {
 
         /* In a regular interval perform a check if the scan is done */
         String scanId = scanResponse.getJSONObject("Scan").getString("Id");
-        String scanStatus = ScanManagement.getScanStatus(ntoEntUrl, ntoEntApiKey, scanId).getString("Status");
-        log.println("Waiting for scan to complete");
-        while (!scanStatus.matches(SCAN_DONE_REGEX)) {
-            log.println("Still waiting for scan to complete");
+        String scan_status = ScanManagement.getScanStatus(ntoEntUrl,ntoEntApiKey,scanId);
+        while(!scan_status.matches(FINISHED_SCANNING)) {
+            log.println("Waiting for scan to finish");
             try {
-                // Sleep for SLEEPTIME seconds
                 TimeUnit.SECONDS.sleep(SLEEPTIME);
                 ntoEntApiKey = Authentication.authenticate(ntoEntUrl, ntoLogin, ntoPassword);
-                scanStatus = ScanManagement.getScanStatus(ntoEntUrl, ntoEntApiKey, scanId).getString("Status");
-                log.println("Scan status is: " + scanStatus);
+                scan_status = ScanManagement.getScanStatus(ntoEntUrl, ntoEntApiKey, scanId);
+                log.println("Scan status: [" + scan_status +"]");
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
 
         /* Scan finished */
-        scanResponse = ScanManagement.hasReport(ntoEntUrl, ntoEntApiKey, scanId);
-        if (!scanResponse.getBoolean("Result")) {
+        if (!ScanManagement.hasReport(ntoEntUrl, ntoEntApiKey, scanId)) {
             log.println("No reports for this scan: " + scanId);
         }
 
-        log.println("Scan completed!");
+        log.println("Finished scanning!");
 
-        if (!scanStatus.matches(SUCCESSFUL_SCAN)) {
-            log.println("Scan completed but not successful.");
+        if (!(ScanManagement.getScanStatus(ntoEntUrl, ntoEntApiKey, scanId))
+                .matches(SUCCESSFUL_SCAN)) {
+            log.println("Scan was complete but was not successful. Status was '" +
+                    ScanManagement.getScanStatus(ntoEntUrl, ntoEntApiKey, scanId) +
+                    "'");
             return true;
         }
 
@@ -351,7 +346,6 @@ public class PostBuildScan extends Publisher {
         @Override
         public boolean configure(StaplerRequest req, net.sf.json.JSONObject formData) throws FormException {
             this.ntoEntUrl = formData.getString("ntoEntUrl");
-            this.ntoEntApiKey = formData.getString("ntoEntApiKey");
             this.ntoLogin = formData.getString("ntoLogin");
             this.ntoPassword = formData.getString("ntoPassword");
             this.jiraRestUrl = formData.getString("jiraRestUrl");
@@ -456,7 +450,7 @@ public class PostBuildScan extends Publisher {
          * @return
          */
         private String[] getConfigNames() {
-            if (ntoEntApiKey.isEmpty()) {
+            if (ntoEntApiKey == null || ntoEntApiKey.isEmpty()) {
                 this.ntoEntApiKey = Authentication.authenticate(ntoEntUrl, ntoLogin, ntoPassword);
             }
             return ScanConfiguration.getConfigNames(ntoEntUrl, ntoEntApiKey);
@@ -466,7 +460,7 @@ public class PostBuildScan extends Publisher {
          * @return
          */
         private String[] getEngineGroups() {
-            if (ntoEntApiKey.isEmpty()) {
+            if (ntoEntApiKey == null || ntoEntApiKey.isEmpty()) {
                 this.ntoEntApiKey = Authentication.authenticate(ntoEntUrl, ntoLogin, ntoPassword);
             }
             return ScanEngineGroup.getEngineNamesGroupsForClient(ntoEntUrl,ntoEntApiKey);
