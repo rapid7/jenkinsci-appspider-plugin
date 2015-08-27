@@ -1,13 +1,21 @@
 package com.rapid7.appspider;
 
+import freemarker.template.Configuration;
+import freemarker.template.Template;
+import freemarker.template.TemplateException;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
@@ -15,7 +23,7 @@ import org.json.*;
 
 import javax.ws.rs.core.MediaType;
 import java.io.*;
-import java.net.URISyntaxException;
+import java.net.*;
 import java.util.*;
 
 /**
@@ -145,6 +153,54 @@ public class Base {
         return null;
     }
 
+
+    /**
+     * @param apiCall
+     * @param authToken
+     * @param params
+     * @return
+     */
+    public static Object post(String apiCall, String authToken, HashMap<String,String> params ) {
+        try {
+            /* Setup the request body */
+            StringWriter scanConfigJsonRequest = new StringWriter();
+            Template template = new Configuration().getTemplate(
+                    "src/main/java/com/rapid7/appspider/template/scanConfigJsonRequestTemplate.ftl");
+            template.process(params,scanConfigJsonRequest);
+
+            String boundary = "-----" + new Date().getTime();
+            HttpEntity entity = MultipartEntityBuilder.create()
+                    .setBoundary(boundary)
+                    .addTextBody("config", scanConfigJsonRequest.toString(), ContentType.APPLICATION_JSON)
+                    .build();
+
+            HttpClient httpClient = HttpClientBuilder.create().build();
+            HttpPost postRequest = new HttpPost(apiCall);
+            postRequest.addHeader("Authorization", "Basic " + authToken);
+            postRequest.addHeader("Accept", "application/json");
+            postRequest.setEntity(entity);
+
+            HttpResponse postResponse = httpClient.execute(postRequest);
+            int statusCode = postResponse.getStatusLine().getStatusCode();
+            if (statusCode == SUCCESS) {
+                return getClassType(postResponse);
+            } else {
+                throw new RuntimeException("Failed! HTTP error code: " + statusCode);
+            }
+
+
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (TemplateException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     /**
      * @param apiCall
      * @param authToken
@@ -183,7 +239,6 @@ public class Base {
         }
         return null;
     }
-
     /**
      * @param response
      * @return
