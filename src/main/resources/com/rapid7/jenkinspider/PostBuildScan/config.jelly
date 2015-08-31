@@ -13,7 +13,7 @@
     <f:entry field="configName" title="Scan Configuration Name" help="/plugin/PostBuildScan/help/config/help-configName.html">
       <f:select />
     </f:entry>
-    <f:entry field="scanFilename" title="Scan Filename" >
+    <f:entry field="reportName" title="Report name" >
       <f:textbox />
     </f:entry>
     <f:entry field="enableScan" title="Run the scan after the build finish?">

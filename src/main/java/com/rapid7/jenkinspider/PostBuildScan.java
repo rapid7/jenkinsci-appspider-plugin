@@ -43,7 +43,7 @@ public class PostBuildScan extends Publisher {
     private String configName;  // Not set to final since it may change
                                 // if user decided to create a new scan config
 
-    private final String scanFilename;
+    private final String reportName;
     private final Boolean enableScan;
     private final Boolean generateReport;
 
@@ -52,12 +52,12 @@ public class PostBuildScan extends Publisher {
     private String scanConfigEngineGroupName;
 
     @DataBoundConstructor
-    public PostBuildScan(String configName, String scanFilename,
+    public PostBuildScan(String configName, String reportName,
                          Boolean enableScan, Boolean generateReport,
                          String scanConfigName, String scanConfigUrl,
                          String scanConfigEngineGroupName ) {
         this.configName = configName;
-        this.scanFilename = scanFilename;
+        this.reportName = reportName;
         this.enableScan = enableScan;
         this.generateReport = generateReport;
         this.scanConfigName = scanConfigName;
@@ -78,8 +78,8 @@ public class PostBuildScan extends Publisher {
         return configName;
     }
 
-    public String getScanFilename() {
-        return scanFilename;
+    public String getReportName() {
+        return reportName;
     }
 
     public Boolean getEnableScan() {
@@ -113,7 +113,7 @@ public class PostBuildScan extends Publisher {
         log.println("Value of NTOEnterprise Login: " + ntoLogin);
         log.println("Value of NTOEnterprise Password: [FILTERED]");
         log.println("Value of Scan Configuration name: " + configName);
-        log.println("Value of Scan Filename: " + scanFilename);
+        log.println("Value of Scan Filename: " + reportName);
 
         // Don't perform a scan
         if (!enableScan) {
@@ -216,7 +216,7 @@ public class PostBuildScan extends Publisher {
         String xmlFile = ReportManagement.getVulnerabilitiesSummaryXml(ntoEntUrl, ntoEntApiKey, scanId);
 
         /* Saving the Report*/
-        SaveToFile(filePath.getParent() + "/" + filePath.getBaseName() + "/" + scanFilename + "_" +
+        SaveToFile(filePath.getParent() + "/" + filePath.getBaseName() + "/" + reportName + "_" +
                 new SimpleDateFormat("yyyy.MM.dd_HH.mm.ss").format(new Date()) + ".xml", xmlFile);
         log.println("Generating report done.");
 
@@ -323,11 +323,7 @@ public class PostBuildScan extends Publisher {
             return "Publish Scan to NTOEnterprise";
         }
 
-        public String getNtoEntUrl() {
-            return ntoEntUrl;
-        }
-
-        public String getNtoEntApiKey() { return ntoEntApiKey; }
+        public String getNtoEntUrl() { return ntoEntUrl; }
 
         public String getNtoLogin() { return ntoLogin; }
 
@@ -348,6 +344,7 @@ public class PostBuildScan extends Publisher {
             this.ntoEntUrl = formData.getString("ntoEntUrl");
             this.ntoLogin = formData.getString("ntoLogin");
             this.ntoPassword = formData.getString("ntoPassword");
+            this.ntoEntApiKey = null;
             this.jiraRestUrl = formData.getString("jiraRestUrl");
             this.jiraLogin = formData.getString("jiraLogin");
             this.jiraPassword = formData.getString("jiraPassword");

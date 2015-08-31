@@ -39,9 +39,10 @@ Things that are needed:
     ```sh
     $ mvn hpi:run
     ```
-    when the build is complete, kill the session by CTRL + C. For successive build:
+    when the build is complete, kill the session by CTRL + C. This is needed to generate the necessary folder. 
+    For successive build:
     ```sh
     $ mvn hpi:hpi
     ```
 
-4. The hpi file is located at target/jenkinspider.hpi
+5. The hpi file is located at target/jenkinspider.hpi
