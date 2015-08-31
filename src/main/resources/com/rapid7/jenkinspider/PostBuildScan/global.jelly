@@ -4,24 +4,19 @@
 
 <f:section title="AppSpider Global Configuration">
 
-  <f:entry field="ntoEntUrl" title="NTOEnterprise Server Url">
+  <f:entry field="appSpiderEntUrl" title="AppSpider Rest Url">
     <f:textbox />
   </f:entry>
   <f:section title="AppSpider Credentials">
-    <f:entry field="ntoEntApiKey" title="NTOEnterprise Server API Key">
+    <f:entry field="appSpiderUsername" title="Username">
       <f:textbox />
     </f:entry>
-    <f:entry title="OR"><f:label /></f:entry>
-    <f:entry field="ntoLogin" title="NTOEnterprise Server login name">
-      <f:textbox />
-    </f:entry>
-    <f:entry field="ntoPassword" title="NTOEnterprise Server password">
+    <f:entry field="appSpiderPassword" title="Password">
       <f:password />
     </f:entry>
     <f:validateButton
-      title="Test Credentials" method="testCredentials" with="ntoEntUrl,ntoLogin,ntoPassword" />
+      title="Test Credentials" method="testCredentials" with="appSpiderEntUrl,appSpiderUsername,appSpiderPassword" />
   </f:section>
-
 
 </f:section>
 </j:jelly>

@@ -11,6 +11,7 @@ import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Publisher;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import org.apache.commons.validator.UrlValidator;
 import org.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -18,6 +19,9 @@ import org.kohsuke.stapler.StaplerRequest;
 
 import javax.servlet.ServletException;
 import java.io.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
@@ -32,22 +36,35 @@ import static java.lang.Thread.sleep;
 public class PostBuildScan extends Publisher {
 
     private final int SLEEPTIME = 90; //seconds
-    private final String SCAN_DONE_REGEX = "Completed|Stopped";
+    private final String SUCCESSFUL_SCAN = "Completed|Stopped";
+    private final String UNSUCCESSFUL_SCAN = "ReportError";
+    private final String FINISHED_SCANNING = SUCCESSFUL_SCAN + "|" + UNSUCCESSFUL_SCAN;
 
-    private final String scanConfig;
-    private final String scanFilename;
+    private String configName;  // Not set to final since it may change
+                                // if user decided to create a new scan config
+
+    private final String reportName;
     private final Boolean enableScan;
     private final Boolean generateReport;
 
+    private String scanConfigName;
+    private String scanConfigUrl;
+    private String scanConfigEngineGroupName;
 
     @DataBoundConstructor
-    public PostBuildScan(String scanConfig, String scanFilename,
-                         Boolean enableScan, Boolean generateReport) {
-        this.scanConfig = scanConfig;
-        this.scanFilename = scanFilename;
+    public PostBuildScan(String configName, String reportName,
+                         Boolean enableScan, Boolean generateReport,
+                         String scanConfigName, String scanConfigUrl,
+                         String scanConfigEngineGroupName ) {
+        this.configName = configName;
+        this.reportName = reportName;
         this.enableScan = enableScan;
         this.generateReport = generateReport;
+        this.scanConfigName = scanConfigName;
+        this.scanConfigUrl = scanConfigUrl;
+        this.scanConfigEngineGroupName = scanConfigEngineGroupName;
     }
+
 
     @Override
     public BuildStepMonitor getRequiredMonitorService() {
@@ -57,12 +74,12 @@ public class PostBuildScan extends Publisher {
     /*
     *  This will be used from the config.jelly
     * */
-    public String getScanConfig() {
-        return scanConfig;
+    public String getConfigName() {
+        return configName;
     }
 
-    public String getScanFilename() {
-        return scanFilename;
+    public String getReportName() {
+        return reportName;
     }
 
     public Boolean getEnableScan() {
@@ -73,21 +90,29 @@ public class PostBuildScan extends Publisher {
         return generateReport;
     }
 
+    public String getScanConfigEngineGroupName() {
+        return scanConfigEngineGroupName;
+    }
+
+    /**
+     * @param build
+     * @param launcher
+     * @param listener
+     * @return
+     */
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
         PrintStream log = listener.getLogger();
-        String ntoEntUrl = getDescriptor().getNtoEntUrl();
-        String ntoEntApiKey = getDescriptor().getNtoEntApiKey();
-        String ntoLogin = getDescriptor().getNtoLogin();
-        String ntoPassword = getDescriptor().getNtoPassword();
+        String appSpiderEntUrl = getDescriptor().getAppSpiderEntUrl();
+        String appSpiderEntApiKey = null;
+        String appSpiderUsername = getDescriptor().getAppSpiderUsername();
+        String appSpiderPassword = getDescriptor().getAppSpiderPassword();
 
-        log.println("Value of NTOEnterprise Server Url: " + ntoEntUrl);
-        log.println("Value of NTOEnterprise Server API Key: [FILTERED]");
-        log.println("Value of NTOEnterprise Login: " + ntoLogin);
+        log.println("Value of NTOEnterprise Server Url: " + appSpiderEntUrl);
+        log.println("Value of NTOEnterprise Login: " + appSpiderUsername);
         log.println("Value of NTOEnterprise Password: [FILTERED]");
-        log.println("Value of Scan Configuration name: " + scanConfig);
-        log.println("Value of Scan Filename: " + scanFilename);
-
+        log.println("Value of Scan Configuration name: " + configName);
+        log.println("Value of Scan Filename: " + reportName);
 
         // Don't perform a scan
         if (!enableScan) {
@@ -98,16 +123,37 @@ public class PostBuildScan extends Publisher {
         /*
         * Check if we need an authentication token
         * */
-        if (ntoEntApiKey.isEmpty()) {
+        if (appSpiderEntApiKey == null || appSpiderEntApiKey.isEmpty()) {
             // We need to get the authToken
-            ntoEntApiKey = Authentication.authenticate(ntoEntUrl, ntoLogin, ntoPassword);
+            appSpiderEntApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
+        }
+
+        if (isANewScanConfig()) {
+            log.println("Value of Scan Config Name: " + scanConfigName);
+            log.println("Value of Scan Config URL: " + scanConfigUrl);
+            log.println("Value of Scan Config Engine Group name: " + scanConfigEngineGroupName);
+
+            /* Need to indicate to the user that we are going to overwrite the existing scan config */
+
+            /* Create a new scan config */
+            String engineGroupId = ScanEngineGroup.getEngineGroupIdFromName(appSpiderEntUrl, appSpiderEntApiKey, scanConfigEngineGroupName);
+            ScanConfiguration.saveConfig(appSpiderEntUrl, appSpiderEntApiKey, scanConfigName, scanConfigUrl, engineGroupId);
+            log.println("Successfully created the scan config " + scanConfigName);
+
+            // Set the configName to the new created scan config
+            configName = scanConfigName;
+            log.println("Value of Scan Configuration name: " + configName);
+
+            /* Reset scanConfigName and scanConfigUrl */
+            scanConfigName = null;
+            scanConfigUrl = null;
         }
 
         /*
         * (1) Execute the scan
         * (2) Obtain the response from the NTOEnterprise Server
         * */
-        JSONObject scanResponse = ScanManagement.runScanByConfigName(ntoEntUrl, ntoEntApiKey, scanConfig);
+        JSONObject scanResponse = ScanManagement.runScanByConfigName(appSpiderEntUrl, appSpiderEntApiKey, configName);
 
         /*
         * Check if a malformed response was received from the server
@@ -121,7 +167,7 @@ public class PostBuildScan extends Publisher {
         * Response received. Check if the request was successful.
         * */
         if (!scanResponse.getBoolean("IsSuccess")) {
-            log.println("Error: Response from " + ntoEntUrl + " came back not successful");
+            log.println("Error: Response from " + appSpiderEntUrl + " came back not successful");
             return false;
         }
 
@@ -135,42 +181,53 @@ public class PostBuildScan extends Publisher {
 
         /* In a regular interval perform a check if the scan is done */
         String scanId = scanResponse.getJSONObject("Scan").getString("Id");
-        String scanStatus = ScanManagement.getScanStatus(ntoEntUrl, ntoEntApiKey, scanId).getString("Status");
-        log.println("Waiting for scan to complete");
-        while (!scanStatus.matches(SCAN_DONE_REGEX)) {
-            log.println("Still waiting for scan to complete");
+        String scan_status = ScanManagement.getScanStatus(appSpiderEntUrl,appSpiderEntApiKey,scanId);
+        while(!scan_status.matches(FINISHED_SCANNING)) {
+            log.println("Waiting for scan to finish");
             try {
-                // Sleep for SLEEPTIME seconds
                 TimeUnit.SECONDS.sleep(SLEEPTIME);
-                ntoEntApiKey = Authentication.authenticate(ntoEntUrl, ntoLogin, ntoPassword);
-                scanStatus = ScanManagement.getScanStatus(ntoEntUrl, ntoEntApiKey, scanId).getString("Status");
-                log.println("Scan status is: " + scanStatus);
+                appSpiderEntApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
+                scan_status = ScanManagement.getScanStatus(appSpiderEntUrl, appSpiderEntApiKey, scanId);
+                log.println("Scan status: [" + scan_status +"]");
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
 
         /* Scan finished */
-        scanResponse = ScanManagement.hasReport(ntoEntUrl, ntoEntApiKey, scanId);
-        if (!scanResponse.getBoolean("Result")) {
+        if (!ScanManagement.hasReport(appSpiderEntUrl, appSpiderEntApiKey, scanId)) {
             log.println("No reports for this scan: " + scanId);
-            return false;
         }
 
-        log.println("Scan completed!");
+        log.println("Finished scanning!");
 
+        if (!(ScanManagement.getScanStatus(appSpiderEntUrl, appSpiderEntApiKey, scanId))
+                .matches(SUCCESSFUL_SCAN)) {
+            log.println("Scan was complete but was not successful. Status was '" +
+                    ScanManagement.getScanStatus(appSpiderEntUrl, appSpiderEntApiKey, scanId) +
+                    "'");
+            return true;
+        }
+
+        /* Scan completed with either a 'Complete' or 'Stopped' status */
         FilePath filePath = build.getWorkspace();
         log.println("Generating xml report to:" + filePath.getBaseName());
-        String xmlFile = ReportManagement.getVulnerabilitiesSummaryXml(ntoEntUrl, ntoEntApiKey, scanId);
+        String xmlFile = ReportManagement.getVulnerabilitiesSummaryXml(appSpiderEntUrl, appSpiderEntApiKey, scanId);
 
-        /* Saving the Re*/
-        SaveToFile(filePath.getParent() + "/" + filePath.getBaseName() + "/" + scanFilename + "_" +
-                new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date()) + ".xml", xmlFile);
+        /* Saving the Report*/
+        SaveToFile(filePath.getParent() + "/" + filePath.getBaseName() + "/" + reportName + "_" +
+                new SimpleDateFormat("yyyy.MM.dd_HH.mm.ss").format(new Date()) + ".xml", xmlFile);
         log.println("Generating report done.");
+
         return true;
     }
 
-    private static void SaveToFile(String filename, String data) {
+    /**
+     *
+     * @param filename
+     * @param data
+     */
+    private void SaveToFile(String filename, String data) {
         File file = new File(filename);
         try {
             if (!file.exists()) {
@@ -186,6 +243,11 @@ public class PostBuildScan extends Publisher {
         }
     }
 
+    private boolean isANewScanConfig() {
+        return (!(scanConfigName == null || scanConfigName.isEmpty()) &&
+                !(scanConfigUrl  == null || scanConfigUrl.isEmpty()));
+    }
+
     // Overridden for better type safety.
     // If your plugin doesn't really define any property on Descriptor,
     // you don't have to do this.
@@ -193,6 +255,7 @@ public class PostBuildScan extends Publisher {
     public DescriptorImp getDescriptor() {
         return (DescriptorImp) super.getDescriptor();
     }
+
 
     /**
      * Descriptor for {@link PostBuildScan}. Used as a singleton.
@@ -205,15 +268,15 @@ public class PostBuildScan extends Publisher {
     @Extension
     public static final class DescriptorImp extends Descriptor<Publisher> {
 
-        private static int AUTHTOKEN_LENGTH = 584;
-
-        private String ntoEntUrl;
-        private String ntoEntApiKey;
-        private String ntoLogin;
-        private String ntoPassword;
-        private String[] ntoConfigNames;
+        private String appSpiderEntUrl;
+        private String appSpiderApiKey;
+        private String appSpiderUsername;
+        private String appSpiderPassword;
+        private String[] scanConfigNames;
+        private String[] scanConfigEngines;
 
         public DescriptorImp() {
+
             load();
         }
 
@@ -227,7 +290,7 @@ public class PostBuildScan extends Publisher {
          * prevent the form from being saved. It just means that a message
          * will be displayed to the user.
          */
-        public FormValidation doCheckNtoEntUrl(@QueryParameter String value)
+        public FormValidation doCheckappSpiderEntUrl(@QueryParameter String value)
                 throws IOException, ServletException {
             if (value.length() == 0)
                 return FormValidation.error("Please set a value");
@@ -250,61 +313,74 @@ public class PostBuildScan extends Publisher {
          */
         @Override
         public String getDisplayName() {
-            return "Publish Scan to NTOEnterprise";
+            return "Scan build using AppSpider";
         }
 
-        /**
-         * @return
-         */
-        public String getNtoEntUrl() {
-            return ntoEntUrl;
-        }
+        public String getAppSpiderEntUrl() { return appSpiderEntUrl; }
 
-        public String getNtoEntApiKey() {
-            return ntoEntApiKey;
-        }
+        public String getAppSpiderUsername() { return appSpiderUsername; }
 
-        public String getNtoLogin() {
-            return ntoLogin;
-        }
+        public String getAppSpiderPassword() { return appSpiderPassword; }
 
-        public String getNtoPassword() {
-            return ntoPassword;
-        }
+        public String[] getScanConfigNames() { return scanConfigNames; }
 
-        public String[] getNtoConfigNames() {
-            return ntoConfigNames;
-        }
+        public String[] getScanConfigEngines() { return scanConfigEngines; }
+
 
         @Override
         public boolean configure(StaplerRequest req, net.sf.json.JSONObject formData) throws FormException {
-            this.ntoEntUrl = formData.getString("ntoEntUrl");
-            this.ntoEntApiKey = formData.getString("ntoEntApiKey");
-            this.ntoLogin = formData.getString("ntoLogin");
-            this.ntoPassword = formData.getString("ntoPassword");
+            this.appSpiderEntUrl = formData.getString("appSpiderEntUrl");
+            this.appSpiderUsername = formData.getString("appSpiderUsername");
+            this.appSpiderPassword = formData.getString("appSpiderPassword");
             save();
             return super.configure(req, net.sf.json.JSONObject.fromObject(formData));
         }
 
-        /**/
-        public ListBoxModel doFillScanConfigItems() {
-            ntoConfigNames = getConfigNames();
+        /**
+         * Method for populating the dropdown menu with
+         * all the available scan configs
+         * @return
+         */
+        public ListBoxModel doFillConfigNameItems() {
+            scanConfigNames = getConfigNames();
             ListBoxModel items = new ListBoxModel();
-            for (int i = 0; i < ntoConfigNames.length; i++) {
-                items.add(ntoConfigNames[i]);
+            items.add("[Select a scan config name]"); // Adding a default "Pick a scan configuration" entry
+            for (int i = 0; i < scanConfigNames.length; i++) {
+                items.add(scanConfigNames[i]);
             }
             return items;
         }
 
-        public FormValidation doTestCredentials(@QueryParameter("ntoEntUrl") final String ntoRestUrl,
-                                                @QueryParameter("ntoLogin") final String ntoLogin,
-                                                @QueryParameter("ntoPassword") final String ntoPassword) {
+        /**
+         * Method for populating the dropdown menu with
+         * all the available scan engine groups
+         * @return
+         */
+        public ListBoxModel doFillScanConfigEngineGroupNameItems() {
+            scanConfigEngines = getEngineGroups();
+            ListBoxModel items = new ListBoxModel();
+            items.add("[Select an engine group name]"); // Adding a default "Pick a engine group name" entry
+            for (int i = 0; i < scanConfigEngines.length; i++ ) {
+                items.add(scanConfigEngines[i]);
+            }
+            return items;
+        }
+
+        /**
+         * @param appSpiderEntUrl
+         * @param appSpiderUsername
+         * @param appSpiderPassword
+         * @return
+         */
+        public FormValidation doTestCredentials(@QueryParameter("appSpiderEntUrl") final String appSpiderEntUrl,
+                                                @QueryParameter("appSpiderUsername") final String appSpiderUsername,
+                                                @QueryParameter("appSpiderPassword") final String appSpiderPassword) {
             try {
-                String authToken = Authentication.authenticate(ntoRestUrl, ntoLogin, ntoPassword);
-                if (!authToken.equals(null) && authToken.length() == AUTHTOKEN_LENGTH) {
-                    return FormValidation.ok("Connected Successfully.");
-                } else {
+                String authToken = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
+                if (authToken.equals(null)) {
                     return FormValidation.error("Invalid username / password combination");
+                } else {
+                    return FormValidation.ok("Connected Successfully.");
                 }
             } catch (NullPointerException e) {
                 return FormValidation.error("Invalid username / password combination");
@@ -312,16 +388,48 @@ public class PostBuildScan extends Publisher {
 
         }
 
+
+        public FormValidation doTestUrl(@QueryParameter("scanConfigUrl") final String scanConfigUrl) {
+            try {
+                if (new UrlValidator().isValid(scanConfigUrl)) {
+                    URL url = new URL(scanConfigUrl);
+                    URLConnection conn = url.openConnection();
+                    conn.connect();
+                    return FormValidation.ok("'" + scanConfigUrl + "' is a valid url");
+                } else {
+                    return FormValidation.error("Invalid url. Check the protocol. For example: 'http://"+scanConfigUrl+"'");
+                }
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+                return FormValidation.error("Unable to connect to \"" + scanConfigUrl +"\". Try again in a few mins or " +
+                        "try another url");
+            } catch (IOException e) {
+                e.printStackTrace();
+                return FormValidation.error("Unable to connect to \"" + scanConfigUrl +"\". Try again in a few mins or " +
+                        "try another url");
+            }
+        }
+
         /**
          * @return
          */
         private String[] getConfigNames() {
-            if (ntoEntApiKey.isEmpty()) {
-                this.ntoEntApiKey = Authentication.authenticate(ntoEntUrl, ntoLogin, ntoPassword);
+            if (appSpiderApiKey == null || appSpiderApiKey.isEmpty()) {
+                this.appSpiderApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
             }
-            String[] configNames = ScanConfiguration.getConfigNames(ntoEntUrl, ntoEntApiKey);
-            return configNames;
+            return ScanConfiguration.getConfigNames(appSpiderEntUrl, appSpiderApiKey);
         }
+
+        /**
+         * @return
+         */
+        private String[] getEngineGroups() {
+            if (appSpiderApiKey == null || appSpiderApiKey.isEmpty()) {
+                this.appSpiderApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
+            }
+            return ScanEngineGroup.getEngineNamesGroupsForClient(appSpiderEntUrl, appSpiderApiKey);
+        }
+
     }
 
 }

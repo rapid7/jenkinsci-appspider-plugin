@@ -8,12 +8,13 @@ import org.junit.Test;
  * Created by nbugash on 08/07/15.
  */
 public class BaseUnitTest {
-    private static String restUrl = "http://ontesting.ntobjectives.com/ntoe36/rest/v1";
-    private static String username = "wstclient";
-    private static String password = "wstclient";
-    private static String configName = "wst3linksXSS_nb2";
-    private static String configId = "dfd5dc78-7eec-46f2-a8ef-7580b778ea02";
-    private static String scanId = "957285b2-89dd-42a7-bf6c-9f17c470703a";
+//    private static String restUrl = "http://10.4.87.166/AppSpiderEnterprise/rest/v1";
+    private static String restUrl = System.getenv("RESTURL");
+    private static String username = System.getenv("USERNAME");
+    private static String password = System.getenv("PASSWORD");
+    private static String configName = System.getenv("CONFIGNAME");
+    private static String configId = System.getenv("CONFIGID");
+    private static String scanId = System.getenv("SCANID");
 
     public static String getRestUrl() { return restUrl; }
     public static String getUsername() { return username; }
