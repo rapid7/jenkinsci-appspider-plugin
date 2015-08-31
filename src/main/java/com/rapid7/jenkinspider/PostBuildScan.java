@@ -108,9 +108,8 @@ public class PostBuildScan extends Publisher {
         String appSpiderUsername = getDescriptor().getAppSpiderUsername();
         String appSpiderPassword = getDescriptor().getAppSpiderPassword();
 
-        log.println("Value of NTOEnterprise Server Url: " + appSpiderEntUrl);
-        log.println("Value of NTOEnterprise Login: " + appSpiderUsername);
-        log.println("Value of NTOEnterprise Password: [FILTERED]");
+        log.println("Value of AppSpider Enterprise Server Url: " + appSpiderEntUrl);
+        log.println("Value of AppSpider Username: " + appSpiderUsername);
         log.println("Value of Scan Configuration name: " + configName);
         log.println("Value of Scan Filename: " + reportName);
 
@@ -142,7 +141,7 @@ public class PostBuildScan extends Publisher {
 
             // Set the configName to the new created scan config
             configName = scanConfigName;
-            log.println("Value of Scan Configuration name: " + configName);
+            log.println("New value of Scan Configuration name: " + configName);
 
             /* Reset scanConfigName and scanConfigUrl */
             scanConfigName = null;
@@ -268,6 +267,8 @@ public class PostBuildScan extends Publisher {
     @Extension
     public static final class DescriptorImp extends Descriptor<Publisher> {
 
+        private final String ALPHANUMERIC_REGEX = "^[a-zA-Z0_\\-\\.]*$";
+
         private String appSpiderEntUrl;
         private String appSpiderApiKey;
         private String appSpiderUsername;
@@ -389,16 +390,24 @@ public class PostBuildScan extends Publisher {
         }
 
 
-        public FormValidation doTestUrl(@QueryParameter("scanConfigUrl") final String scanConfigUrl) {
+        public FormValidation doValidateNewScanConfig(@QueryParameter("scanConfigName") final String scanConfigName,
+                                                      @QueryParameter("scanConfigUrl") final String scanConfigUrl) {
             try {
+                if (!scanConfigName.matches(ALPHANUMERIC_REGEX) ||
+                        scanConfigName.contains(" ") ||
+                        scanConfigName.isEmpty()) {
+                    return FormValidation.error("Invalid Scan configuration name. " +
+                            "Only alpha-numeric, '.' , '_' , and '-' are allowed");
+                }
+
                 if (new UrlValidator().isValid(scanConfigUrl)) {
                     URL url = new URL(scanConfigUrl);
                     URLConnection conn = url.openConnection();
                     conn.connect();
-                    return FormValidation.ok("'" + scanConfigUrl + "' is a valid url");
                 } else {
-                    return FormValidation.error("Invalid url. Check the protocol. For example: 'http://"+scanConfigUrl+"'");
+                    return FormValidation.error("Invalid url. Check the protocol (i.e http/https) or the port.");
                 }
+                return FormValidation.ok("Valid scan configuration name and url.");
             } catch (MalformedURLException e) {
                 e.printStackTrace();
                 return FormValidation.error("Unable to connect to \"" + scanConfigUrl +"\". Try again in a few mins or " +
