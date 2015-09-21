@@ -40,9 +40,9 @@ Things that are needed:
     $ mvn hpi:run
     ```
     when the build is complete, kill the session by CTRL + C. This is needed to generate the necessary folder. 
-    For successive build:
+    Then run the command to build the package.
     ```sh
     $ mvn hpi:hpi
     ```
-
+    
 5. The hpi file is located at target/jenkinspider.hpi
