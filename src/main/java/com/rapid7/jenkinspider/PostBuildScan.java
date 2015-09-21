@@ -123,8 +123,8 @@ public class PostBuildScan extends Publisher {
         * Check if we need an authentication token
         * */
         if (appSpiderEntApiKey == null || appSpiderEntApiKey.isEmpty()) {
-            // We need to get the authToken
-            appSpiderEntApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
+        //   We need to get the authToken
+        appSpiderEntApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
         }
 
         if (isANewScanConfig()) {
