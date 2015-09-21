@@ -43,7 +43,7 @@
           <f:select default="Loading list of scan engine groups..."/>
         </f:entry>
         <f:validateButton
-          title="Test Url" method="testUrl" with="scanConfigUrl" />
+          title="Validate" method="validateNewScanConfig" with="scanConfigName,scanConfigUrl" />
        </f:section>
     </f:advanced>
 
