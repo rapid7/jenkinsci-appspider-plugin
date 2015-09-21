@@ -8,7 +8,7 @@ import org.junit.Test;
  * Created by nbugash on 08/07/15.
  */
 public class BaseUnitTest {
-//    private static String restUrl = "http://10.4.87.166/AppSpiderEnterprise/rest/v1";
+
     private static String restUrl = System.getenv("RESTURL");
     private static String username = System.getenv("USERNAME");
     private static String password = System.getenv("PASSWORD");
