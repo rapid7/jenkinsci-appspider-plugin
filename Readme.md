@@ -27,7 +27,7 @@ Things that are needed:
 ### How to build the hpi file
 1. Clone the git repository
     ```sh
-    $ git clone git@github.com:nbugash-r7/jenkinspider.git
+    $ git clone https://github.com/rapid7/jenkinspider.git
     ```
     
 2. Change directory to the jenkinspider repository
