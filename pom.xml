@@ -36,6 +36,11 @@
     <url>https://github.com/jenkinsci/appspider-build-scanner-plugin.git</url>
     <tag>jenkinsci-appspider-plugin-1.0.1</tag>
   </scm>
+  <!-- Turning off doclint -->
+  <properties>
+    <additionalparam>-Xdoclint:none</additionalparam>
+  </properties>
+
   <repositories>
     <repository>
       <id>repo.jenkins-ci.org</id>
