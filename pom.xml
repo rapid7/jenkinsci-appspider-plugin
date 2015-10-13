@@ -17,7 +17,7 @@
 
   <name>AppSpider Plugin</name>
   <description>Scan build using AppSpider</description>
-  <url>https://github.com/rapid7/jenkinsci-appspider-plugin</url>
+  <url>https://wiki.jenkins-ci.org/display/JENKINS/Appspider+Build+Scanner+Plugin</url>
   <!-- If you want this to appear on the wiki page:
   -->
   <developers>
