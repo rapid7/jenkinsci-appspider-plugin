@@ -10,9 +10,9 @@ public class Authentication extends Base {
     private final static String API = "/Authentication/Login";
 
     /**
-     * @param restUrl
-     * @param username
-     * @param password
+     * @param restUrl Restful api url of the Appspider enterprise
+     * @param username Username to log in to the Appspider enterprise
+     * @param password Password
      * @return the authorization token
      */
     public static String authenticate(String restUrl, String username, String password) {
