@@ -19,21 +19,21 @@
   <description>Scan build using AppSpider</description>
   <url>https://github.com/nbugash-r7/jenkinspider</url>
   <!-- If you want this to appear on the wiki page:
+  -->
   <developers>
     <developer>
-      <id>bhacker</id>
-      <name>Bob Q. Hacker</name>
-      <email>bhacker@nowhere.net</email>
+      <id>nbugash</id>
+      <name>Nonico Bugash</name>
+      <email>Nonico_Bugash@rapid7.com</email>
     </developer>
   </developers>
-  -->
   <!-- Assuming you want to host on @jenkinsci:
-  <scm>
-    <connection>scm:git:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
-    <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
-    <url>http://github.com/jenkinsci/${project.artifactId}-plugin</url>
-  </scm>
    -->
+  <scm>
+    <connection>scm:git:git://github.com/jenkinsci/appspider-build-scanner-plugin.git</connection>
+    <developerConnection>scm:git:git@github.com:jenkinsci/appspider-build-scanner-plugin.git</developerConnection>
+    <url>https://github.com/jenkinsci/appspider-build-scanner-plugin.git</url>
+  </scm>
   <repositories>
     <repository>
       <id>repo.jenkins-ci.org</id>
