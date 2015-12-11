@@ -13,7 +13,7 @@
   <!-- <artifactId>jenkinspider</artifactId> -->
   <artifactId>jenkinsci-appspider-plugin</artifactId>
   <!--<version>1.0</version>-->
-  <version>1.0.7</version>
+  <version>1.0.5</version>
   <packaging>hpi</packaging>
 
   <name>AppSpider Plugin</name>
