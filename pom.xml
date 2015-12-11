@@ -13,7 +13,7 @@
   <!-- <artifactId>jenkinspider</artifactId> -->
   <artifactId>jenkinsci-appspider-plugin</artifactId>
   <!--<version>1.0</version>-->
-  <version>1.0.5-SNAPSHOT</version>
+  <version>1.0.5</version>
   <packaging>hpi</packaging>
 
   <name>AppSpider Plugin</name>
@@ -34,7 +34,7 @@
     <connection>scm:git:git://github.com/jenkinsci/appspider-build-scanner-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/appspider-build-scanner-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/appspider-build-scanner-plugin.git</url>
-    <tag>jenkinsci-appspider-plugin-1.0.7</tag>
+    <tag>jenkinsci-appspider-plugin-1.0.5</tag>
   </scm>
   <!-- Turning off doclint -->
   <properties>
