@@ -423,9 +423,7 @@ public class PostBuildScan extends Publisher {
          * @return
          */
         private String[] getConfigNames() {
-            if (appSpiderApiKey == null || appSpiderApiKey.isEmpty()) {
-                this.appSpiderApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
-            }
+            this.appSpiderApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
             return ScanConfiguration.getConfigNames(appSpiderEntUrl, appSpiderApiKey);
         }
 
@@ -433,9 +431,7 @@ public class PostBuildScan extends Publisher {
          * @return
          */
         private String[] getEngineGroups() {
-            if (appSpiderApiKey == null || appSpiderApiKey.isEmpty()) {
-                this.appSpiderApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
-            }
+            this.appSpiderApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
             return ScanEngineGroup.getEngineNamesGroupsForClient(appSpiderEntUrl, appSpiderApiKey);
         }
 
