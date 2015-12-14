@@ -267,7 +267,7 @@ public class PostBuildScan extends Publisher {
     @Extension
     public static final class DescriptorImp extends Descriptor<Publisher> {
 
-        private final String ALPHANUMERIC_REGEX = "^[a-zA-Z0_\\-\\.]*$";
+        private final String ALPHANUMERIC_REGEX = "^[a-zA-Z0-9_\\-\\.]*$";
 
         private String appSpiderEntUrl;
         private String appSpiderApiKey;
