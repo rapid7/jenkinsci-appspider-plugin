@@ -28,6 +28,7 @@
       No need to go to the NTO Enterprise site
     -->
 
+    <!-- Temporarily removing this functionality
     <f:advanced title="Create new scan configuration">
       <f:section title="Create new scan configuration" >
         <f:entry field="disclaimer" title="Note: This will overwrite your current scan config selection" >
@@ -46,6 +47,7 @@
           title="Validate" method="validateNewScanConfig" with="scanConfigName,scanConfigUrl" />
        </f:section>
     </f:advanced>
+    -->
 
   </f:section>
 </j:jelly>
