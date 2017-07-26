@@ -46,3 +46,17 @@ Things that are needed:
     ```
     
 5. The hpi file is located at target/jenkinspider.hpi
+
+### Usage and Configuration
+After installation of the plugin make sure you do the following:
+
+1. Navigate to Jenkins System Settings
+
+2. Add the REST URL for AppSpider Enterprise
+    ```
+    ex. https://<AppSpiderEnterpriseFQDN>/AppSpiderEnterprise/rest/v1/
+    ```
+
+3. Click `Add` to add credentials to use for AppSpider (one for each client).  Make sure you add the word `appspider` in the description of the credential.  This is required for credentials to show up.
+
+4. Save system settings and add the Post Build process to a jenkins item.
