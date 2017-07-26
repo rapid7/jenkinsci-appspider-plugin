@@ -28,6 +28,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ================================================================================
 
-The nexpose-client gem is provided under the 3-clause BSD license above.
+The jenkinsci-appspider-plugin plugin is provided under the 3-clause BSD license above.
 
 The copyright on this package is held by Rapid7, Inc.
