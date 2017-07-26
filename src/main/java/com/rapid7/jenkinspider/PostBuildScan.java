@@ -1,5 +1,8 @@
 package com.rapid7.jenkinspider;
 
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -24,6 +27,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 import com.rapid7.appspider.*;
@@ -46,6 +51,7 @@ public class PostBuildScan extends Publisher {
     private final String reportName;
     private final Boolean enableScan;
     private final Boolean generateReport;
+    private String credentialsId;
 
     private String scanConfigName;
     private String scanConfigUrl;
@@ -55,7 +61,7 @@ public class PostBuildScan extends Publisher {
     public PostBuildScan(String configName, String reportName,
                          Boolean enableScan, Boolean generateReport,
                          String scanConfigName, String scanConfigUrl,
-                         String scanConfigEngineGroupName ) {
+                         String scanConfigEngineGroupName, String credentialsId) {
         this.configName = configName;
         this.reportName = reportName;
         this.enableScan = enableScan;
@@ -63,8 +69,20 @@ public class PostBuildScan extends Publisher {
         this.scanConfigName = scanConfigName;
         this.scanConfigUrl = scanConfigUrl;
         this.scanConfigEngineGroupName = scanConfigEngineGroupName;
+        this.credentialsId = credentialsId;
     }
 
+
+    public List<StandardUsernamePasswordCredentials> getCreds() {
+        final List<StandardUsernamePasswordCredentials> credentials = CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class);
+        List<StandardUsernamePasswordCredentials> creds = new ArrayList<StandardUsernamePasswordCredentials>();
+        for (int i = 0; i < credentials.size(); i++) {
+            if (credentials.get(i).getDescription().toLowerCase().contains("appspider")) {
+                creds.add(credentials.get(i));
+            }
+        }
+        return creds;
+    }
 
     @Override
     public BuildStepMonitor getRequiredMonitorService() {
@@ -80,6 +98,10 @@ public class PostBuildScan extends Publisher {
 
     public String getReportName() {
         return reportName;
+    }
+
+    public String getCredentialsId() {
+        return credentialsId;
     }
 
     public Boolean getEnableScan() {
@@ -105,8 +127,21 @@ public class PostBuildScan extends Publisher {
         PrintStream log = listener.getLogger();
         String appSpiderEntUrl = getDescriptor().getAppSpiderEntUrl();
         String appSpiderEntApiKey = null;
-        String appSpiderUsername = getDescriptor().getAppSpiderUsername();
-        String appSpiderPassword = getDescriptor().getAppSpiderPassword();
+        String appSpiderUsername = null;
+        String appSpiderPassword = null;
+
+        List<StandardUsernamePasswordCredentials> creds = getCreds();
+        if (creds.size() <= 0) {
+            log.println("No credentials provided.  Continuing the build without scanning.");
+            return false;
+        }
+        for (int i = 0; i < creds.size(); i++) {
+            if (creds.get(i).getId().equals(credentialsId)) {
+                appSpiderUsername = creds.get(i).getUsername();
+                appSpiderPassword = creds.get(i).getPassword().getPlainText();
+                break;
+            }
+        }
 
         log.println("Value of AppSpider Enterprise Server Url: " + appSpiderEntUrl);
         log.println("Value of AppSpider Username: " + appSpiderUsername);
@@ -119,13 +154,8 @@ public class PostBuildScan extends Publisher {
             return false;
         }
 
-        /*
-        * Check if we need an authentication token
-        * */
-        if (appSpiderEntApiKey == null || appSpiderEntApiKey.isEmpty()) {
         //   We need to get the authToken
         appSpiderEntApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
-        }
 
         if (isANewScanConfig()) {
             log.println("Value of Scan Config Name: " + scanConfigName);
@@ -275,6 +305,7 @@ public class PostBuildScan extends Publisher {
         private String appSpiderPassword;
         private String[] scanConfigNames;
         private String[] scanConfigEngines;
+        private String credentialsId;
 
         public DescriptorImp() {
 
@@ -327,12 +358,12 @@ public class PostBuildScan extends Publisher {
 
         public String[] getScanConfigEngines() { return scanConfigEngines; }
 
+        public String getCredentialsId() { return credentialsId; }
+
 
         @Override
         public boolean configure(StaplerRequest req, net.sf.json.JSONObject formData) throws FormException {
             this.appSpiderEntUrl = formData.getString("appSpiderEntUrl");
-            this.appSpiderUsername = formData.getString("appSpiderUsername");
-            this.appSpiderPassword = formData.getString("appSpiderPassword");
             save();
             return super.configure(req, net.sf.json.JSONObject.fromObject(formData));
         }
@@ -342,14 +373,55 @@ public class PostBuildScan extends Publisher {
          * all the available scan configs
          * @return
          */
-        public ListBoxModel doFillConfigNameItems() {
-            scanConfigNames = getConfigNames();
+        public ListBoxModel doFillConfigNameItems(@QueryParameter("value") String value) {
             ListBoxModel items = new ListBoxModel();
-            items.add("[Select a scan config name]"); // Adding a default "Pick a scan configuration" entry
+            if (value == null || value.isEmpty()) {
+                items.add("[Select a scan config name]");
+                return items;
+            }
+
+            List<StandardUsernamePasswordCredentials> creds = getCreds();
+
+            if (creds.size() <= 0) {
+                items.add("[Please add a credential!]");
+                return items;
+            }
+            for (int i = 0; i < creds.size(); i++) {
+                if (creds.get(i).getId().equals(value)) {
+                    appSpiderUsername = creds.get(i).getUsername();
+                    appSpiderPassword = creds.get(i).getPassword().getPlainText();
+                    break;
+                }
+            }
+
+            scanConfigNames = getConfigNames();
+
+            items.add("[Select a scan config name]");
             for (int i = 0; i < scanConfigNames.length; i++) {
                 items.add(scanConfigNames[i]);
             }
             return items;
+        }
+
+        public ListBoxModel doFillCredentialsIdItems() {
+            List<StandardUsernamePasswordCredentials> creds = getCreds();
+            StandardListBoxModel items = new StandardListBoxModel();
+            items.add("[Select a credential]", "");
+            for (int i = 0; i < creds.size(); i++) {
+                items.add(creds.get(i).getUsername(), creds.get(i).getId());
+            }
+            return items;
+        }
+
+        public List<StandardUsernamePasswordCredentials> getCreds() {
+            final List<StandardUsernamePasswordCredentials> credentials = CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class);
+            List<StandardUsernamePasswordCredentials> creds = new ArrayList<StandardUsernamePasswordCredentials>();
+            for (int i = 0; i < credentials.size(); i++) {
+                if (credentials.get(i).getDescription().toLowerCase().contains("appspider")) {
+                    creds.add(credentials.get(i));
+                }
+            }
+            return creds;
         }
 
         /**
@@ -357,10 +429,30 @@ public class PostBuildScan extends Publisher {
          * all the available scan engine groups
          * @return
          */
-        public ListBoxModel doFillScanConfigEngineGroupNameItems() {
-            scanConfigEngines = getEngineGroups();
+        public ListBoxModel doFillScanConfigEngineGroupNameItems(@QueryParameter("value") String value) {
             ListBoxModel items = new ListBoxModel();
-            items.add("[Select an engine group name]"); // Adding a default "Pick a engine group name" entry
+            if (value == null || value.isEmpty()) {
+                items.add("[Select an engine group name]");
+                return items;
+            }
+
+            List<StandardUsernamePasswordCredentials> creds = getCreds();
+
+            if (creds.size() <= 0) {
+                items.add("[Please add a credential!]");
+                return items;
+            }
+            for (int i = 0; i < creds.size(); i++) {
+                if (creds.get(i).getId().equals(value)) {
+                    appSpiderUsername = creds.get(i).getUsername();
+                    appSpiderPassword = creds.get(i).getPassword().getPlainText();
+                    break;
+                }
+            }
+
+            scanConfigEngines = getEngineGroups();
+
+            items.add("[Select an engine group name]");
             for (int i = 0; i < scanConfigEngines.length; i++ ) {
                 items.add(scanConfigEngines[i]);
             }
@@ -369,13 +461,22 @@ public class PostBuildScan extends Publisher {
 
         /**
          * @param appSpiderEntUrl
-         * @param appSpiderUsername
-         * @param appSpiderPassword
+         * @param credentialsId
          * @return
          */
         public FormValidation doTestCredentials(@QueryParameter("appSpiderEntUrl") final String appSpiderEntUrl,
-                                                @QueryParameter("appSpiderUsername") final String appSpiderUsername,
-                                                @QueryParameter("appSpiderPassword") final String appSpiderPassword) {
+                                                @QueryParameter("credentialsId") final String credentialsId) {
+            List<StandardUsernamePasswordCredentials> creds = getCreds();
+            if (creds.size() <= 0) {
+                return FormValidation.error("No credential was found");
+            }
+            for (int i = 0; i < creds.size(); i++) {
+                if (creds.get(i).getId().equals(credentialsId)) {
+                    appSpiderUsername = creds.get(i).getUsername();
+                    appSpiderPassword = creds.get(i).getPassword().getPlainText();
+                    break;
+                }
+            }
             try {
                 String authToken = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
                 if (authToken.equals(null)) {
