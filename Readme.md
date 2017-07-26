@@ -4,10 +4,10 @@ Jenkinspider is a plugin developed to be used in Jenkins to scan builds
 ### Prerequisite
 Things that are needed:
 * AppSpider Enterprise Rest URL
-* Username and password to the AppSpider Enterprise Server
+* Username and password for any clients in AppSpider Enterprise
 
 ### Version
-0.0.2
+2.0.0
 
 ### Steps
 1. Build the hpi file (See How to build the hpi file section below)
