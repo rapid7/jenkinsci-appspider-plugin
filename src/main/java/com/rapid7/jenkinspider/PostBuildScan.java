@@ -28,8 +28,6 @@ import java.util.concurrent.TimeUnit;
 
 import com.rapid7.appspider.*;
 
-import static java.lang.Thread.sleep;
-
 /**
  * Created by nbugash on 20/07/15.
  */
@@ -214,9 +212,14 @@ public class PostBuildScan extends Publisher {
         String xmlFile = ReportManagement.getVulnerabilitiesSummaryXml(appSpiderEntUrl, appSpiderEntApiKey, scanId);
 
         /* Saving the Report*/
-        SaveToFile(filePath.getParent() + "/" + filePath.getBaseName() + "/" + reportName + "_" +
-                new SimpleDateFormat("yyyy.MM.dd_HH.mm.ss").format(new Date()) + ".xml", xmlFile);
-        log.println("Generating report done.");
+        String filenameWithoutExtension = filePath.getParent() + "/" + filePath.getBaseName() + "/" + reportName + "_" +
+                new SimpleDateFormat("yyyy.MM.dd_HH.mm.ss").format(new Date());
+        SaveToFile(filenameWithoutExtension + ".xml", xmlFile);
+        log.println("Generating XML report done.");
+
+        log.println("Downloading report ZIP containing HTML formatted results");
+        InputStream zipInputStream = ReportManagement.getReportZip(appSpiderEntUrl, appSpiderEntApiKey, scanId);
+        SaveToFile(filenameWithoutExtension + ".zip", zipInputStream);
 
         return true;
     }
@@ -235,6 +238,40 @@ public class PostBuildScan extends Publisher {
             BufferedWriter bw = new BufferedWriter(new FileWriter(file.getAbsolutePath()));
             bw.write(data);
             bw.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    /**
+     *
+     * @param filename
+     * @param data
+     */
+    private void SaveToFile(String filename, InputStream inputStream) {
+        if (inputStream == null) {
+            throw new RuntimeException("unexpected invalid input stream encountered while saving file");
+        }
+
+        File file = new File(filename);
+
+        try {
+            if (!file.exists()) {
+                file.createNewFile();
+            }
+
+            InputStream bufferedInputStream = new BufferedInputStream(inputStream); 
+            FileOutputStream outputStream = new FileOutputStream(file);
+            byte data[] = new byte[4096];
+            int count = 0;
+            while ((count = bufferedInputStream.read(data)) != -1) {
+                outputStream.write(data, 0, count);
+            }
+            outputStream.flush();
+            outputStream.close();
+            bufferedInputStream.close();
+
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
