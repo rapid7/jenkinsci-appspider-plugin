@@ -69,8 +69,7 @@ public class Base {
         } 
 
         try {
-            InputStream inputStream = getResponse.getEntity().getContent();
-            return inputStream;
+            return getResponse.getEntity().getContent();
         }
         catch (IOException e) {
             e.printStackTrace();
