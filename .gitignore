@@ -70,3 +70,5 @@ crashlytics-build.properties
 # Ignoring test
 /src/test/
 
+# Visual Studio Code files
+.vscode
