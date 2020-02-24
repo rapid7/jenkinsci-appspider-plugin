@@ -44,8 +44,8 @@ public class Base {
             return null;
         }
 
-        int statusCode = getResponse.getStatusLine().getStatusCode();
-        if (statusCode == SUCCESS) {
+        int statusCode;
+        if (SUCCESS == (statusCode = getResponse.getStatusLine().getStatusCode())) {
             return getClassType(getResponse); // Return a JSONObject of the response
         } else {
             throw new RuntimeException("Failed! HTTP error code: " + statusCode);
@@ -63,8 +63,8 @@ public class Base {
         if (getResponse == null) {
             return null;
         }
-        int statusCode = getResponse.getStatusLine().getStatusCode();
-        if (statusCode != SUCCESS) {
+        int statusCode;
+        if (SUCCESS != (statusCode = getResponse.getStatusLine().getStatusCode())) {
             throw new RuntimeException("Failed! HTTP error code: " + statusCode);
         } 
 

@@ -256,21 +256,20 @@ public class PostBuildScan extends Publisher {
 
         File file = new File(filename);
 
-        try {
+        try (InputStream bufferedInputStream = new BufferedInputStream(inputStream);
+             FileOutputStream outputStream = new FileOutputStream(file))
+        {
             if (!file.exists()) {
                 file.createNewFile();
             }
 
-            InputStream bufferedInputStream = new BufferedInputStream(inputStream); 
-            FileOutputStream outputStream = new FileOutputStream(file);
+
             byte data[] = new byte[4096];
             int count = 0;
             while ((count = bufferedInputStream.read(data)) != -1) {
                 outputStream.write(data, 0, count);
             }
             outputStream.flush();
-            outputStream.close();
-            bufferedInputStream.close();
 
         } catch (FileNotFoundException e) {
             e.printStackTrace();
