@@ -70,5 +70,16 @@ crashlytics-build.properties
 # Ignoring test
 /src/test/
 
-# Visual Studio Code files
+# Eclipse
+.settings/
+.project
+
+# Java annotation processor (APT)
+.factorypath
+
+# JDT-specific (Eclipse Java Development Tools)
+.classpath
+
+## Visual Studio Code files
 .vscode
+
