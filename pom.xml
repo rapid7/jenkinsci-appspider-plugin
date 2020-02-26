@@ -19,6 +19,21 @@
   <name>AppSpider Plugin</name>
   <description>Scan build using AppSpider</description>
   <url>https://wiki.jenkins-ci.org/display/JENKINS/Appspider+Build+Scanner+Plugin</url>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.1</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
   <!-- If you want this to appear on the wiki page:
   -->
   <developers>
@@ -26,6 +41,11 @@
       <id>nbugash</id>
       <name>Nonico Bugash</name>
       <email>Nonico_Bugash@rapid7.com</email>
+    </developer>
+    <developer>
+      <id>tmoreland</id>
+      <name>Terry Moreland</name>
+      <email>Terry_Moreland@rapid7.com</email>
     </developer>
   </developers>
   <!-- Assuming you want to host on @jenkinsci:

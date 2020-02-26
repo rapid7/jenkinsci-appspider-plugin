@@ -9,13 +9,11 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
@@ -40,45 +38,47 @@ public class Base {
      * @return JSON Object of the Restful api call
      */
     public static Object get(String apiCall, String authToken, Map<String, String> params) {
-        try {
-            //Create HTTP Client
-            HttpClient httpClient = HttpClientBuilder.create().build();
-
-            // Create HttpGet request
-            HttpGet getRequest;
-            if (!params.equals(null)) {
-                URIBuilder uriBuilder = new URIBuilder(apiCall);
-                for (Map.Entry<String, String> entry : params.entrySet()) {
-                    uriBuilder.addParameter(entry.getKey(), entry.getValue());
-                }
-                getRequest = new HttpGet(uriBuilder.build());
-            } else {
-                // Initialized the get request
-                getRequest = new HttpGet(apiCall);
-            }
-
-            // Add the authentication token
-            getRequest.addHeader("Content-Type", "application/x-www-form-urlencoded");
-            getRequest.addHeader("Authorization", "Basic " + authToken);
-
-            // Receive the response from AppSpider
-            HttpResponse getResponse = httpClient.execute(getRequest);
-            int statusCode = getResponse.getStatusLine().getStatusCode();
-            if (statusCode == SUCCESS) {
-                // Return a JSONObject of the response
-                return getClassType(getResponse);
-//                return new JSONObject(getResponse);
-            } else {
-                throw new RuntimeException("Failed! HTTP error code: " + statusCode);
-            }
-        } catch (ClientProtocolException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
+        // Receive the response from AppSpider
+        HttpResponse getResponse = getResponse(apiCall, authToken, params);
+        if (getResponse == null) {
+            return null;
         }
-        return null;
+
+        int statusCode;
+        if (SUCCESS == (statusCode = getResponse.getStatusLine().getStatusCode())) {
+            return getClassType(getResponse); // Return a JSONObject of the response
+        } else {
+            throw new RuntimeException("Failed! HTTP error code: " + statusCode);
+        }
+    }
+
+    /**
+     * @param apiCall
+     * @param authToken
+     * @param params
+     * @return 
+     */
+    public static InputStream getInputStreamReader(String apiCall, String authToken, Map<String, String> params) {
+        HttpResponse getResponse = getResponse(apiCall, authToken, params);
+        if (getResponse == null) {
+            return null;
+        }
+        int statusCode;
+        if (SUCCESS != (statusCode = getResponse.getStatusLine().getStatusCode())) {
+            throw new RuntimeException("Failed! HTTP error code: " + statusCode);
+        } 
+
+        try {
+            return getResponse.getEntity().getContent();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+        catch (UnsupportedOperationException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     /**
@@ -268,4 +268,45 @@ public class Base {
         return null;
     }
 
+    /**
+     * @param apiCall
+     * @param authToken
+     * @param params
+     * @return HttpResponse result from get request to apiCall
+     */
+    private static HttpResponse getResponse(String apiCall, String authToken, Map<String, String> params) {
+        try {
+            //Create HTTP Client
+            HttpClient httpClient = HttpClientBuilder.create().build();
+
+            // Create HttpGet request
+            HttpGet getRequest;
+            if (!params.equals(null)) {
+                URIBuilder uriBuilder = new URIBuilder(apiCall);
+                for (Map.Entry<String, String> entry : params.entrySet()) {
+                    uriBuilder.addParameter(entry.getKey(), entry.getValue());
+                }
+                getRequest = new HttpGet(uriBuilder.build());
+            } else {
+                // Initialized the get request
+                getRequest = new HttpGet(apiCall);
+            }
+
+            // Add the authentication token
+            getRequest.addHeader("Content-Type", "application/x-www-form-urlencoded");
+            getRequest.addHeader("Authorization", "Basic " + authToken);
+
+            // Receive the response from AppSpider
+            HttpResponse getResponse = httpClient.execute(getRequest);
+            return getResponse;
+
+        } catch (ClientProtocolException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }
