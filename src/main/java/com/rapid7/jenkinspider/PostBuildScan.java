@@ -247,7 +247,7 @@ public class PostBuildScan extends Publisher {
     /**
      *
      * @param filename
-     * @param data
+     * @param inputStream
      */
     private void SaveToFile(String filename, InputStream inputStream) {
         if (inputStream == null) {

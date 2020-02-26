@@ -30,11 +30,11 @@ public class ReportManagement extends Base {
     }
 
     /**
-     * @param restUrl
-     * @param authToken
-     * @param scanId
-     * @return byte array representing zipped report, ideally this should stream to a file rather than
-     *         one big array this is just an initial attempt
+     * @param restUrl    Base API endpoint 
+     * @param authToken  Authentication token used to authorize request
+     * @param scanId     unique identifier of the scan to get the report zip for
+     * @return InputStream which can be used to read the zip file contents, it is the callers responsibility
+     *         to close this
      */
     public static InputStream getReportZip(String restUrl, String authToken, String scanId) {
         String apiCall = restUrl + GETREPORTZIP;
