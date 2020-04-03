@@ -56,7 +56,7 @@ public class Base {
      * @param apiCall
      * @param authToken
      * @param params
-     * @return 
+     * @return InputStream which can be used to read response from apiCall
      */
     public static InputStream getInputStreamReader(String apiCall, String authToken, Map<String, String> params) {
         HttpResponse getResponse = getResponse(apiCall, authToken, params);
@@ -84,7 +84,7 @@ public class Base {
     /**
      * @param apiCall
      * @param authToken
-     * @return
+     * @return JSONObject result of apiCall
      */
     public static JSONObject get(String apiCall, String authToken) {
         try {
@@ -137,8 +137,7 @@ public class Base {
             int statusCode = postResponse.getStatusLine().getStatusCode();
             if (statusCode == SUCCESS) {
                 // Obtain the JSON Object of the response
-                JSONObject jsonResponse = (JSONObject) getClassType(postResponse);
-                return jsonResponse;
+                return (JSONObject) getClassType(postResponse);
             } else {
                 throw new RuntimeException("Failed! HTTP error code: " + statusCode);
             }
@@ -158,7 +157,7 @@ public class Base {
      * @param apiCall
      * @param authToken
      * @param params
-     * @return
+     * @return on success the class type of post response
      */
     public static Object post(String apiCall, String authToken, HashMap<String,String> params ) {
         try {
@@ -205,7 +204,7 @@ public class Base {
      * @param apiCall
      * @param authToken
      * @param params
-     * @return
+     * @return on success the class type of post response
      */
     public static Object post(String apiCall, String authToken, Map<String, String> params) {
         try {
@@ -257,8 +256,7 @@ public class Base {
             try {
                 StringWriter writer = new StringWriter();
                 IOUtils.copy(new InputStreamReader(response.getEntity().getContent()), writer);
-                String xmlResponse = writer.toString();
-                return xmlResponse;
+                return writer.toString();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -297,8 +295,7 @@ public class Base {
             getRequest.addHeader("Authorization", "Basic " + authToken);
 
             // Receive the response from AppSpider
-            HttpResponse getResponse = httpClient.execute(getRequest);
-            return getResponse;
+            return httpClient.execute(getRequest);
 
         } catch (ClientProtocolException e) {
             e.printStackTrace();

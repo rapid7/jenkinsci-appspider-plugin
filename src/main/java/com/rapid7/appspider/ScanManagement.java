@@ -29,7 +29,7 @@ public class ScanManagement extends Base {
     /**
      * @param restUrl
      * @param authToken
-     * @return
+     * @return JSONObject response body of getScans api call
      */
     public static JSONObject getScans(String restUrl, String authToken) {
         String apiCall = restUrl + GETSCANS;
@@ -44,7 +44,7 @@ public class ScanManagement extends Base {
      * @param restUrl
      * @param authToken
      * @param configId
-     * @return
+     * @return JSONObject response body of ScanByConfigId api call
      */
     public static JSONObject runScanByConfigId(String restUrl, String authToken, String configId) {
         String apiCall = restUrl + RUNSCAN;
@@ -61,7 +61,7 @@ public class ScanManagement extends Base {
      * @param restUrl
      * @param authToken
      * @param configName
-     * @return
+     * @return JSONObject response body of scans by config name api call
      */
     public static JSONObject runScanByConfigName(String restUrl, String authToken, String configName) {
 
@@ -91,7 +91,7 @@ public class ScanManagement extends Base {
      * @param restUrl
      * @param authToken
      * @param scanId
-     * @return
+     * @return String containing current scan status on success; otherwise, null
      */
     public static String getScanStatus(String restUrl, String authToken, String scanId) {
         String apiCall = restUrl + GETSCANSTATUS;
@@ -108,7 +108,7 @@ public class ScanManagement extends Base {
      * @param restUrl
      * @param authToken
      * @param scanId
-     * @return
+     * @return  Boolean on success representing whether the report is present or not on success, or null on failure
      */
     public static Boolean hasReport(String restUrl, String authToken, String scanId) {
         String apiCall = restUrl + HASREPORT;

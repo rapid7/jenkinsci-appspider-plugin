@@ -33,10 +33,8 @@ import com.rapid7.appspider.*;
  */
 public class PostBuildScan extends Publisher {
 
-    private final int SLEEPTIME = 90; //seconds
     private final String SUCCESSFUL_SCAN = "Completed|Stopped";
     private final String UNSUCCESSFUL_SCAN = "ReportError";
-    private final String FINISHED_SCANNING = SUCCESSFUL_SCAN + "|" + UNSUCCESSFUL_SCAN;
 
     private String configName;  // Not set to final since it may change
                                 // if user decided to create a new scan config
@@ -96,7 +94,7 @@ public class PostBuildScan extends Publisher {
      * @param build
      * @param launcher
      * @param listener
-     * @return
+     * @return boolean representing success or failure of the action to perform
      */
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
@@ -121,8 +119,8 @@ public class PostBuildScan extends Publisher {
         * Check if we need an authentication token
         * */
         if (appSpiderEntApiKey == null || appSpiderEntApiKey.isEmpty()) {
-        //   We need to get the authToken
-        appSpiderEntApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
+            //   We need to get the authToken
+            appSpiderEntApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
         }
 
         if (isANewScanConfig()) {
@@ -179,9 +177,12 @@ public class PostBuildScan extends Publisher {
         /* In a regular interval perform a check if the scan is done */
         String scanId = scanResponse.getJSONObject("Scan").getString("Id");
         String scan_status = ScanManagement.getScanStatus(appSpiderEntUrl,appSpiderEntApiKey,scanId);
+        String FINISHED_SCANNING = SUCCESSFUL_SCAN + "|" + UNSUCCESSFUL_SCAN;
         while(!scan_status.matches(FINISHED_SCANNING)) {
             log.println("Waiting for scan to finish");
             try {
+                //seconds
+                int SLEEPTIME = 90;
                 TimeUnit.SECONDS.sleep(SLEEPTIME);
                 appSpiderEntApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
                 scan_status = ScanManagement.getScanStatus(appSpiderEntUrl, appSpiderEntApiKey, scanId);
@@ -264,7 +265,7 @@ public class PostBuildScan extends Publisher {
             }
 
 
-            byte data[] = new byte[4096];
+            byte[] data = new byte[4096];
             int count = 0;
             while ((count = bufferedInputStream.read(data)) != -1) {
                 outputStream.write(data, 0, count);
@@ -302,8 +303,6 @@ public class PostBuildScan extends Publisher {
      */
     @Extension
     public static final class DescriptorImp extends Descriptor<Publisher> {
-
-        private final String ALPHANUMERIC_REGEX = "^[a-zA-Z0_\\-\\.]*$";
 
         private String appSpiderEntUrl;
         private String appSpiderApiKey;
@@ -376,7 +375,7 @@ public class PostBuildScan extends Publisher {
         /**
          * Method for populating the dropdown menu with
          * all the available scan configs
-         * @return
+         * @return ListBoxModel containing the scan config names
          */
         public ListBoxModel doFillConfigNameItems() {
             scanConfigNames = getConfigNames();
@@ -391,7 +390,7 @@ public class PostBuildScan extends Publisher {
         /**
          * Method for populating the dropdown menu with
          * all the available scan engine groups
-         * @return
+         * @return ListBoxModel containing engine details
          */
         public ListBoxModel doFillScanConfigEngineGroupNameItems() {
             scanConfigEngines = getEngineGroups();
@@ -407,7 +406,7 @@ public class PostBuildScan extends Publisher {
          * @param appSpiderEntUrl
          * @param appSpiderUsername
          * @param appSpiderPassword
-         * @return
+         * @return FormValidation result of the credentials test
          */
         public FormValidation doTestCredentials(@QueryParameter("appSpiderEntUrl") final String appSpiderEntUrl,
                                                 @QueryParameter("appSpiderUsername") final String appSpiderUsername,
@@ -429,6 +428,7 @@ public class PostBuildScan extends Publisher {
         public FormValidation doValidateNewScanConfig(@QueryParameter("scanConfigName") final String scanConfigName,
                                                       @QueryParameter("scanConfigUrl") final String scanConfigUrl) {
             try {
+                String ALPHANUMERIC_REGEX = "^[a-zA-Z0_\\-\\.]*$";
                 if (!scanConfigName.matches(ALPHANUMERIC_REGEX) ||
                         scanConfigName.contains(" ") ||
                         scanConfigName.isEmpty()) {
