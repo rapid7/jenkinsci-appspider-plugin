@@ -1,10 +1,10 @@
 package com.rapid7.appspider;
 
+import com.google.inject.internal.guava.base.$Optional;
 import org.json.JSONObject;
 import org.json.JSONArray;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by nbugash on 09/07/15.
@@ -110,28 +110,36 @@ public class ScanManagement extends Base {
      * @param scanId
      * @return  Boolean on success representing whether the report is present or not on success, or null on failure
      */
-    public static Boolean hasReport(String restUrl, String authToken, String scanId) {
-        String apiCall = restUrl + HASREPORT;
-        Map<String, String> params = new HashMap<String, String>();
-        params.put("scanId", scanId);
-        Object response = get(apiCall, authToken, params);
-        if (response.getClass().equals(JSONObject.class)) {
-            return ((JSONObject)response).getBoolean("Result")&&
-                    ((JSONObject) response).getBoolean("IsSuccess");
-        }
-        return null;
+    public static Optional<Boolean> hasReport(String restUrl, String authToken, String scanId) {
+        return getBooleanResultFromApiCall(restUrl + HASREPORT, authToken, buildScanIdParameters(scanId));
     }
 
-    public static Boolean isScanFinished(String restUrl, String authToken, String scanId) {
-        String apiCall = restUrl + ISSCANFINISHED;
+    public static Optional<Boolean> isScanFinished(String restUrl, String authToken, String scanId) {
+        return getBooleanResultFromApiCall(restUrl + ISSCANFINISHED, authToken, buildScanIdParameters(scanId));
+    }
+
+    private static Map<String, String> buildScanIdParameters(String scanId) {
         Map<String,String> params = new HashMap<String, String>();
         params.put("scanId", scanId);
-        Object response = get(apiCall,authToken,params);
-        if (response.getClass().equals(JSONObject.class)) {
-            return ((JSONObject)response).getBoolean("Result") &&
-                   ((JSONObject) response).getBoolean("IsSuccess");
-        }
-        return null;
+        return params;
     }
 
+    /**
+     * performs get call to given api endpoint with auth token and params
+     * @param apiCall
+     * @param authToken
+     * @param params
+     * @return Optional Boolean if response was returned, Boolean will be true if both Result and IsSuccess are true
+     */
+    private static Optional<Boolean> getBooleanResultFromApiCall(String apiCall, String authToken, Map<String, String> params) {
+        Object response = get(apiCall,authToken,params);
+        return response instanceof JSONObject
+                ? getBooleanFromJsonObject((JSONObject)response, "Result", "IsSuccess")
+                : Optional.empty();
+    }
+    private static Optional<Boolean> getBooleanFromJsonObject(JSONObject object, String... keys) {
+        return object == null
+                ? Optional.empty()
+                : Optional.of(Arrays.stream(keys).allMatch(k -> object.getBoolean((k))));
+    }
 }

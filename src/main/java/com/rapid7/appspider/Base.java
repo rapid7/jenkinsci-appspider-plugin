@@ -22,6 +22,7 @@ import org.json.*;
 import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
@@ -215,7 +216,7 @@ public class Base {
             postRequest.addHeader("Content-Type", "application/x-www-form-urlencoded");
             postRequest.addHeader("Authorization", "Basic " + authToken);
 
-            if (!params.equals(null)) {
+            if (params != null) {
                 ArrayList<BasicNameValuePair> urlParameters = new ArrayList<BasicNameValuePair>();
                 for (Map.Entry<String, String> entry : params.entrySet()) {
                     urlParameters.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
@@ -255,7 +256,7 @@ public class Base {
         } else if (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_XML)) {
             try {
                 StringWriter writer = new StringWriter();
-                IOUtils.copy(new InputStreamReader(response.getEntity().getContent()), writer);
+                IOUtils.copy(new InputStreamReader(response.getEntity().getContent(), StandardCharsets.UTF_8), writer);
                 return writer.toString();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -279,7 +280,7 @@ public class Base {
 
             // Create HttpGet request
             HttpGet getRequest;
-            if (!params.equals(null)) {
+            if (params != null) {
                 URIBuilder uriBuilder = new URIBuilder(apiCall);
                 for (Map.Entry<String, String> entry : params.entrySet()) {
                     uriBuilder.addParameter(entry.getKey(), entry.getValue());
