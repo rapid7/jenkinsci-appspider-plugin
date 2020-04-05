@@ -69,9 +69,12 @@
     <url>https://github.com/jenkinsci/appspider-build-scanner-plugin.git</url>
     <tag>jenkinsci-appspider-plugin-1.0.1</tag>
   </scm>
+
   <!-- Turning off doclint -->
   <properties>
     <additionalparam>-Xdoclint:none</additionalparam>
+    <java.level>8</java.level>
+    <java.level.test>8</java.level.test>
   </properties>
 
   <repositories>
