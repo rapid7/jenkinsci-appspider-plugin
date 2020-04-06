@@ -17,8 +17,19 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
+
 import javax.servlet.ServletException;
-import java.io.*;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintStream;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -191,7 +202,7 @@ public class PostBuildScan extends Publisher {
         }
 
         /* Scan finished */
-        if (ScanManagement.hasReport(appSpiderEntUrl, appSpiderEntApiKey, scanId).orElse(false)) {
+        if (!ScanManagement.hasReport(appSpiderEntUrl, appSpiderEntApiKey, scanId).orElse(false)) {
             log.println("No reports for this scan: " + scanId);
         }
 

@@ -1,10 +1,12 @@
 package com.rapid7.appspider;
 
-import com.google.inject.internal.guava.base.$Optional;
 import org.json.JSONObject;
 import org.json.JSONArray;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Created by nbugash on 09/07/15.
