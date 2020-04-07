@@ -441,7 +441,7 @@ public class PostBuildScan extends Publisher {
         public FormValidation doValidateNewScanConfig(@QueryParameter("scanConfigName") final String scanConfigName,
                                                       @QueryParameter("scanConfigUrl") final String scanConfigUrl) {
             try {
-                String ALPHANUMERIC_REGEX = "^[a-zA-Z0_\\-\\.]*$";
+                final String ALPHANUMERIC_REGEX = "^[a-zA-Z0_\\-\\.]*$";
                 if (!scanConfigName.matches(ALPHANUMERIC_REGEX) ||
                         scanConfigName.contains(" ") ||
                         scanConfigName.isEmpty()) {
