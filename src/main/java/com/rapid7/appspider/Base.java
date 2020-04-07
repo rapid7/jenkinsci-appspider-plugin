@@ -22,6 +22,7 @@ import org.json.*;
 import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
@@ -56,7 +57,7 @@ public class Base {
      * @param apiCall
      * @param authToken
      * @param params
-     * @return 
+     * @return InputStream which can be used to read response from apiCall
      */
     public static InputStream getInputStreamReader(String apiCall, String authToken, Map<String, String> params) {
         HttpResponse getResponse = getResponse(apiCall, authToken, params);
@@ -84,7 +85,7 @@ public class Base {
     /**
      * @param apiCall
      * @param authToken
-     * @return
+     * @return JSONObject result of apiCall
      */
     public static JSONObject get(String apiCall, String authToken) {
         try {
@@ -137,8 +138,7 @@ public class Base {
             int statusCode = postResponse.getStatusLine().getStatusCode();
             if (statusCode == SUCCESS) {
                 // Obtain the JSON Object of the response
-                JSONObject jsonResponse = (JSONObject) getClassType(postResponse);
-                return jsonResponse;
+                return (JSONObject) getClassType(postResponse);
             } else {
                 throw new RuntimeException("Failed! HTTP error code: " + statusCode);
             }
@@ -158,7 +158,7 @@ public class Base {
      * @param apiCall
      * @param authToken
      * @param params
-     * @return
+     * @return on success the class type of post response
      */
     public static Object post(String apiCall, String authToken, HashMap<String,String> params ) {
         try {
@@ -205,7 +205,7 @@ public class Base {
      * @param apiCall
      * @param authToken
      * @param params
-     * @return
+     * @return on success the class type of post response
      */
     public static Object post(String apiCall, String authToken, Map<String, String> params) {
         try {
@@ -216,7 +216,7 @@ public class Base {
             postRequest.addHeader("Content-Type", "application/x-www-form-urlencoded");
             postRequest.addHeader("Authorization", "Basic " + authToken);
 
-            if (!params.equals(null)) {
+            if (params != null) {
                 ArrayList<BasicNameValuePair> urlParameters = new ArrayList<BasicNameValuePair>();
                 for (Map.Entry<String, String> entry : params.entrySet()) {
                     urlParameters.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
@@ -256,9 +256,8 @@ public class Base {
         } else if (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_XML)) {
             try {
                 StringWriter writer = new StringWriter();
-                IOUtils.copy(new InputStreamReader(response.getEntity().getContent()), writer);
-                String xmlResponse = writer.toString();
-                return xmlResponse;
+                IOUtils.copy(new InputStreamReader(response.getEntity().getContent(), StandardCharsets.UTF_8), writer);
+                return writer.toString();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -281,7 +280,7 @@ public class Base {
 
             // Create HttpGet request
             HttpGet getRequest;
-            if (!params.equals(null)) {
+            if (params != null) {
                 URIBuilder uriBuilder = new URIBuilder(apiCall);
                 for (Map.Entry<String, String> entry : params.entrySet()) {
                     uriBuilder.addParameter(entry.getKey(), entry.getValue());
@@ -297,8 +296,7 @@ public class Base {
             getRequest.addHeader("Authorization", "Basic " + authToken);
 
             // Receive the response from AppSpider
-            HttpResponse getResponse = httpClient.execute(getRequest);
-            return getResponse;
+            return httpClient.execute(getRequest);
 
         } catch (ClientProtocolException e) {
             e.printStackTrace();

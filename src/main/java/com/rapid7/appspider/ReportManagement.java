@@ -19,14 +19,13 @@ public class ReportManagement extends Base {
      * @param restUrl
      * @param authToken
      * @param scanId
-     * @return
+     * @return vulnerability summary in XML format
      */
     public static String getVulnerabilitiesSummaryXml(String restUrl, String authToken, String scanId) {
         String apiCall = restUrl + GETVULNERABILITIESSUMMARY;
         Map<String, String> params = new HashMap<String, String>();
         params.put("scanId", scanId);
-        String response = (String) get(apiCall, authToken, params);
-        return response;
+        return (String) get(apiCall, authToken, params);
     }
 
     /**

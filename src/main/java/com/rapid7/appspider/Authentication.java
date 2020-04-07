@@ -20,8 +20,7 @@ public class Authentication extends Base {
         Object response = post(apiCall, username, password);
         if (response.getClass().equals(JSONObject.class)) {
             if (((JSONObject)response).getBoolean("IsSuccess")) {
-                String authToken = ((JSONObject) response).getString("Token");
-                return authToken;
+                return ((JSONObject) response).getString("Token");
             } else {
                 return null;
             }
