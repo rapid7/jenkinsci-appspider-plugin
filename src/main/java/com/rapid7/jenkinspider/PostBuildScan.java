@@ -48,6 +48,7 @@ public class PostBuildScan extends Publisher {
 
     private static final String SUCCESSFUL_SCAN = "Completed|Stopped";
     private static final String UNSUCCESSFUL_SCAN = "ReportError";
+    private static final String FAILED_SCAN = "Failed";
 
     private String configName;  // Not set to final since it may change
                                 // if user decided to create a new scan config
@@ -186,7 +187,7 @@ public class PostBuildScan extends Publisher {
         /* In a regular interval perform a check if the scan is done */
         String scanId = scanResponse.getJSONObject("Scan").getString("Id");
         String scan_status = ScanManagement.getScanStatus(appSpiderEntUrl,appSpiderEntApiKey,scanId);
-        String FINISHED_SCANNING = SUCCESSFUL_SCAN + "|" + UNSUCCESSFUL_SCAN;
+        String FINISHED_SCANNING = SUCCESSFUL_SCAN + "|" + UNSUCCESSFUL_SCAN + "|" + FAILED_SCAN;
         while(!scan_status.matches(FINISHED_SCANNING)) {
             log.println("Waiting for scan to finish");
             try {
