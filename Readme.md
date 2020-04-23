@@ -7,7 +7,7 @@ Things that are needed:
 * Username and password to the AppSpider Enterprise Server
 
 ### Version
-0.0.2
+1.0.11
 
 ### Steps
 1. Build the hpi file (See How to build the hpi file section below)

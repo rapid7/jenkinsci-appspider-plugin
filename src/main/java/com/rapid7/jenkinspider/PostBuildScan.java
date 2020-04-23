@@ -17,28 +17,38 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
+
 import javax.servlet.ServletException;
-import java.io.*;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintStream;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import com.rapid7.appspider.*;
-
-import static java.lang.Thread.sleep;
 
 /**
  * Created by nbugash on 20/07/15.
  */
 public class PostBuildScan extends Publisher {
 
-    private final int SLEEPTIME = 90; //seconds
-    private final String SUCCESSFUL_SCAN = "Completed|Stopped";
-    private final String UNSUCCESSFUL_SCAN = "ReportError";
-    private final String FINISHED_SCANNING = SUCCESSFUL_SCAN + "|" + UNSUCCESSFUL_SCAN;
+    private static final String SUCCESSFUL_SCAN = "Completed|Stopped";
+    private static final String UNSUCCESSFUL_SCAN = "ReportError";
+    private static final String FAILED_SCAN = "Failed";
 
     private String configName;  // Not set to final since it may change
                                 // if user decided to create a new scan config
@@ -98,20 +108,12 @@ public class PostBuildScan extends Publisher {
      * @param build
      * @param launcher
      * @param listener
-     * @return
+     * @return boolean representing success or failure of the action to perform
      */
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
-        PrintStream log = listener.getLogger();
-        String appSpiderEntUrl = getDescriptor().getAppSpiderEntUrl();
-        String appSpiderEntApiKey = null;
-        String appSpiderUsername = getDescriptor().getAppSpiderUsername();
-        String appSpiderPassword = getDescriptor().getAppSpiderPassword();
 
-        log.println("Value of AppSpider Enterprise Server Url: " + appSpiderEntUrl);
-        log.println("Value of AppSpider Username: " + appSpiderUsername);
-        log.println("Value of Scan Configuration name: " + configName);
-        log.println("Value of Scan Filename: " + reportName);
+        PrintStream log = listener.getLogger();
 
         // Don't perform a scan
         if (!enableScan) {
@@ -119,13 +121,17 @@ public class PostBuildScan extends Publisher {
             return false;
         }
 
-        /*
-        * Check if we need an authentication token
-        * */
-        if (appSpiderEntApiKey == null || appSpiderEntApiKey.isEmpty()) {
-        //   We need to get the authToken
-        appSpiderEntApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
-        }
+        String appSpiderEntUrl = getDescriptor().getAppSpiderEntUrl();
+        log.println("Value of AppSpider Enterprise Server Url: " + appSpiderEntUrl);
+
+        String appSpiderUsername = getDescriptor().getAppSpiderUsername();
+        log.println("Value of AppSpider Username: " + appSpiderUsername);
+
+        String appSpiderPassword = getDescriptor().getAppSpiderPassword();
+        log.println("Value of Scan Configuration name: " + configName);
+
+        String appSpiderEntApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
+        log.println("Value of Scan Filename: " + reportName);
 
         if (isANewScanConfig()) {
             log.println("Value of Scan Config Name: " + scanConfigName);
@@ -157,7 +163,7 @@ public class PostBuildScan extends Publisher {
         /*
         * Check if a malformed response was received from the server
         * */
-        if (scanResponse.equals(null)) {
+        if (Objects.isNull((scanResponse))) {
             log.println("Error: Check the JSON response from the NTOEnterprise Server");
             return false;
         }
@@ -181,9 +187,12 @@ public class PostBuildScan extends Publisher {
         /* In a regular interval perform a check if the scan is done */
         String scanId = scanResponse.getJSONObject("Scan").getString("Id");
         String scan_status = ScanManagement.getScanStatus(appSpiderEntUrl,appSpiderEntApiKey,scanId);
+        String FINISHED_SCANNING = SUCCESSFUL_SCAN + "|" + UNSUCCESSFUL_SCAN + "|" + FAILED_SCAN;
         while(!scan_status.matches(FINISHED_SCANNING)) {
             log.println("Waiting for scan to finish");
             try {
+                //seconds
+                int SLEEPTIME = 90;
                 TimeUnit.SECONDS.sleep(SLEEPTIME);
                 appSpiderEntApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
                 scan_status = ScanManagement.getScanStatus(appSpiderEntUrl, appSpiderEntApiKey, scanId);
@@ -194,7 +203,7 @@ public class PostBuildScan extends Publisher {
         }
 
         /* Scan finished */
-        if (!ScanManagement.hasReport(appSpiderEntUrl, appSpiderEntApiKey, scanId)) {
+        if (!ScanManagement.hasReport(appSpiderEntUrl, appSpiderEntApiKey, scanId).orElse(false)) {
             log.println("No reports for this scan: " + scanId);
         }
 
@@ -202,39 +211,81 @@ public class PostBuildScan extends Publisher {
 
         if (!(ScanManagement.getScanStatus(appSpiderEntUrl, appSpiderEntApiKey, scanId))
                 .matches(SUCCESSFUL_SCAN)) {
-            log.println("Scan was complete but was not successful. Status was '" +
-                    ScanManagement.getScanStatus(appSpiderEntUrl, appSpiderEntApiKey, scanId) +
-                    "'");
+            log.println("Scan was complete but was not successful. Status was '" + ScanManagement.getScanStatus(appSpiderEntUrl, appSpiderEntApiKey, scanId) + "'");
             return true;
         }
 
         /* Scan completed with either a 'Complete' or 'Stopped' status */
         FilePath filePath = build.getWorkspace();
+        if (filePath == null) {
+            log.println("workspace not found, unable to save results");
+            return false;
+        }
         log.println("Generating xml report to:" + filePath.getBaseName());
         String xmlFile = ReportManagement.getVulnerabilitiesSummaryXml(appSpiderEntUrl, appSpiderEntApiKey, scanId);
 
         /* Saving the Report*/
-        SaveToFile(filePath.getParent() + "/" + filePath.getBaseName() + "/" + reportName + "_" +
-                new SimpleDateFormat("yyyy.MM.dd_HH.mm.ss").format(new Date()) + ".xml", xmlFile);
-        log.println("Generating report done.");
+        String filenameWithoutExtension = filePath.getParent() + "/" + filePath.getBaseName() + "/" + reportName + "_" + new SimpleDateFormat("yyyy.MM.dd_HH.mm.ss").format(new Date());
+        SaveToFile(filenameWithoutExtension + ".xml", xmlFile, log);
+        log.println("Generating XML report done.");
+
+        log.println("Downloading report ZIP containing HTML formatted results");
+        InputStream zipInputStream = ReportManagement.getReportZip(appSpiderEntUrl, appSpiderEntApiKey, scanId);
+        SaveToFile(filenameWithoutExtension + ".zip", zipInputStream, log);
 
         return true;
     }
 
     /**
      *
-     * @param filename
-     * @param data
+     * @param filename name of the file to save to
+     * @param data data to save
+     * @param log used to log error in the event that the filename could not be created
      */
-    private void SaveToFile(String filename, String data) {
+    private void SaveToFile(String filename, String data, PrintStream log) {
         File file = new File(filename);
         try {
-            if (!file.exists()) {
-                file.createNewFile();
+            if (!file.exists() && !file.createNewFile()) {
+                log.println("Unable to create file " + filename);
+                return;
             }
-            BufferedWriter bw = new BufferedWriter(new FileWriter(file.getAbsolutePath()));
+            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file.getAbsolutePath()), StandardCharsets.UTF_8));
             bw.write(data);
             bw.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    /**
+     *
+     * @param filename
+     * @param inputStream
+     * @param log
+     */
+    private void SaveToFile(String filename, InputStream inputStream, PrintStream log) {
+        if (inputStream == null) {
+            throw new RuntimeException("unexpected invalid input stream encountered while saving file");
+        }
+
+        File file = new File(filename);
+
+        try (InputStream bufferedInputStream = new BufferedInputStream(inputStream);
+             FileOutputStream outputStream = new FileOutputStream(file))
+        {
+            if (!file.exists() && !file.createNewFile()) {
+                log.println("Unable to create file " + filename);
+                return;
+            }
+
+            byte[] data = new byte[4096];
+            int count = 0;
+            while ((count = bufferedInputStream.read(data)) != -1) {
+                outputStream.write(data, 0, count);
+            }
+            outputStream.flush();
+
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -266,8 +317,6 @@ public class PostBuildScan extends Publisher {
      */
     @Extension
     public static final class DescriptorImp extends Descriptor<Publisher> {
-
-        private final String ALPHANUMERIC_REGEX = "^[a-zA-Z0_\\-\\.]*$";
 
         private String appSpiderEntUrl;
         private String appSpiderApiKey;
@@ -323,9 +372,9 @@ public class PostBuildScan extends Publisher {
 
         public String getAppSpiderPassword() { return appSpiderPassword; }
 
-        public String[] getScanConfigNames() { return scanConfigNames; }
+        public String[] getScanConfigNames() { return scanConfigNames.clone(); }
 
-        public String[] getScanConfigEngines() { return scanConfigEngines; }
+        public String[] getScanConfigEngines() { return scanConfigEngines.clone(); }
 
 
         @Override
@@ -340,7 +389,7 @@ public class PostBuildScan extends Publisher {
         /**
          * Method for populating the dropdown menu with
          * all the available scan configs
-         * @return
+         * @return ListBoxModel containing the scan config names
          */
         public ListBoxModel doFillConfigNameItems() {
             scanConfigNames = getConfigNames();
@@ -355,7 +404,7 @@ public class PostBuildScan extends Publisher {
         /**
          * Method for populating the dropdown menu with
          * all the available scan engine groups
-         * @return
+         * @return ListBoxModel containing engine details
          */
         public ListBoxModel doFillScanConfigEngineGroupNameItems() {
             scanConfigEngines = getEngineGroups();
@@ -371,14 +420,14 @@ public class PostBuildScan extends Publisher {
          * @param appSpiderEntUrl
          * @param appSpiderUsername
          * @param appSpiderPassword
-         * @return
+         * @return FormValidation result of the credentials test
          */
         public FormValidation doTestCredentials(@QueryParameter("appSpiderEntUrl") final String appSpiderEntUrl,
                                                 @QueryParameter("appSpiderUsername") final String appSpiderUsername,
                                                 @QueryParameter("appSpiderPassword") final String appSpiderPassword) {
             try {
                 String authToken = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
-                if (authToken.equals(null)) {
+                if (Objects.isNull((authToken))) {
                     return FormValidation.error("Invalid username / password combination");
                 } else {
                     return FormValidation.ok("Connected Successfully.");
@@ -393,6 +442,7 @@ public class PostBuildScan extends Publisher {
         public FormValidation doValidateNewScanConfig(@QueryParameter("scanConfigName") final String scanConfigName,
                                                       @QueryParameter("scanConfigUrl") final String scanConfigUrl) {
             try {
+                final String ALPHANUMERIC_REGEX = "^[a-zA-Z0_\\-\\.]*$";
                 if (!scanConfigName.matches(ALPHANUMERIC_REGEX) ||
                         scanConfigName.contains(" ") ||
                         scanConfigName.isEmpty()) {

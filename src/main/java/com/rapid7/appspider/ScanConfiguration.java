@@ -27,9 +27,9 @@ public class ScanConfiguration extends Base {
     private static final String GETATTACHMENTS = "/Config/GetAttachments";
 
     /**
-     * @param restUrl
-     * @param authToken
-     * @return
+     * @param restUrl end point to retrieve configs from
+     * @param authToken authorization token required to access the restUrl
+     * @return JSONObject representing the configs
      */
     public static JSONObject getConfigs(String restUrl, String authToken) {
         String apiCall = restUrl + GETCONFIGS;
@@ -43,7 +43,7 @@ public class ScanConfiguration extends Base {
     /**
      * @param restUrl
      * @param authToken
-     * @return
+     * @return String[] of config names
      */
     public static String[] getConfigNames(String restUrl, String authToken){
         JSONObject response = getConfigs(restUrl, authToken);
@@ -61,7 +61,7 @@ public class ScanConfiguration extends Base {
      * @param name
      * @param str_url
      * @param engineGroupId
-     * @return
+     * @return JSONObject of the response for the saveConfig api call
      * @throws MalformedURLException
      */
     public static JSONObject saveConfig(String restUrl, String authToken,
