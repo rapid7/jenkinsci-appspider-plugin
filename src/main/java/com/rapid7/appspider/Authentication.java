@@ -2,6 +2,8 @@ package com.rapid7.appspider;
 
 import org.json.JSONObject;
 
+import java.io.PrintStream;
+
 /**
  * Created by nbugash on 08/07/15.
  */
@@ -18,13 +20,14 @@ public class Authentication extends Base {
     public static String authenticate(String restUrl, String username, String password) {
         String apiCall = restUrl + API;
         Object response = post(apiCall, username, password);
-        if (response.getClass().equals(JSONObject.class)) {
-            if (((JSONObject)response).getBoolean("IsSuccess")) {
-                return ((JSONObject) response).getString("Token");
-            } else {
-                return null;
-            }
+        if (response == null || !(response.getClass().equals(JSONObject.class))) {
+            return "";
         }
-        return null;
+        JSONObject jsonObject = (JSONObject)response;
+        if (jsonObject.getBoolean("IsSuccess")) {
+            return jsonObject.getString("Token");
+        } else {
+            return "";
+        }
     }
 }

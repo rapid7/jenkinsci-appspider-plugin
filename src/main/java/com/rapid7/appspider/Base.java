@@ -13,8 +13,8 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 import org.json.*;
@@ -31,6 +31,7 @@ import java.util.*;
 public class Base {
 
     private final static int SUCCESS = 200;
+    private final static HttpClient CLIENT = new HttpClientFactory().getClient();
 
     /**
      * @param apiCall
@@ -90,14 +91,13 @@ public class Base {
     public static JSONObject get(String apiCall, String authToken) {
         try {
             //Create HTTP Client
-            HttpClient httpClient = HttpClientBuilder.create().build();
             // Initialized the get request
             HttpGet getRequest = new HttpGet(apiCall);
             getRequest.addHeader("Content-Type", "application/x-www-form-urlencoded");
             getRequest.addHeader("Authorization", "Basic " + authToken);
 
             // Receive the response from AppSpider
-            HttpResponse getResponse = httpClient.execute(getRequest);
+            HttpResponse getResponse = CLIENT.execute(getRequest);
             int statusCode = getResponse.getStatusLine().getStatusCode();
             if (statusCode == SUCCESS) {
                 // Return a JSONObject of the response
@@ -115,26 +115,24 @@ public class Base {
     }
 
     /**
-     * @param apiCall
-     * @param username
-     * @param password
+     * @param apiCall Restful url of AppSpider Enterprise
+     * @param username Username to log into AppSpider Enterprise
+     * @param password Password
      * @return Authentication Token from AppSpider
      */
     public static JSONObject post(String apiCall, String username, String password) {
         try {
-            //Create HTTP Client
-            HttpClient httpClient = HttpClientBuilder.create().build();
 
             //Initialize the post request
             HttpPost postRequest = new HttpPost(apiCall);
-            postRequest.addHeader("Content-Type", "application/x-www-form-urlencoded");
+            postRequest.addHeader("Content-Type", "application/json");
+            postRequest.setEntity(
+                    new StringEntity(new JSONObject()
+                            .put("name", username)
+                            .put("password", password).toString()));
 
-            ArrayList<BasicNameValuePair> params = new ArrayList<BasicNameValuePair>();
-            params.add(new BasicNameValuePair("name", username));
-            params.add(new BasicNameValuePair("password", password));
-            postRequest.setEntity(new UrlEncodedFormEntity(params));
             // Receive the response for AppSpider
-            HttpResponse postResponse = httpClient.execute(postRequest);
+            HttpResponse postResponse = CLIENT.execute(postRequest);
             int statusCode = postResponse.getStatusLine().getStatusCode();
             if (statusCode == SUCCESS) {
                 // Obtain the JSON Object of the response
@@ -174,13 +172,12 @@ public class Base {
                     .addTextBody("config", scanConfigJsonRequest.toString(), ContentType.APPLICATION_JSON)
                     .build();
 
-            HttpClient httpClient = HttpClientBuilder.create().build();
             HttpPost postRequest = new HttpPost(apiCall);
             postRequest.addHeader("Authorization", "Basic " + authToken);
             postRequest.addHeader("Accept", "application/json");
             postRequest.setEntity(entity);
 
-            HttpResponse postResponse = httpClient.execute(postRequest);
+            HttpResponse postResponse = CLIENT.execute(postRequest);
             int statusCode = postResponse.getStatusLine().getStatusCode();
             if (statusCode == SUCCESS) {
                 return getClassType(postResponse);
@@ -209,7 +206,6 @@ public class Base {
      */
     public static Object post(String apiCall, String authToken, Map<String, String> params) {
         try {
-            HttpClient httpClient = HttpClientBuilder.create().build();
 
             HttpPost postRequest = new HttpPost(apiCall);
 
@@ -224,7 +220,7 @@ public class Base {
                 postRequest.setEntity(new UrlEncodedFormEntity(urlParameters));
             }
 
-            HttpResponse postResponse = httpClient.execute(postRequest);
+            HttpResponse postResponse = CLIENT.execute(postRequest);
             int statusCode = postResponse.getStatusLine().getStatusCode();
             if (statusCode == SUCCESS) {
                 return getClassType(postResponse);
@@ -246,13 +242,11 @@ public class Base {
     private static Object getClassType(HttpResponse response) {
         String contentType = response.getEntity().getContentType().getValue();
         if (contentType.contains(MediaType.APPLICATION_JSON)) {
-            JSONObject jsonResponse = null;
             try {
-                jsonResponse = new JSONObject(EntityUtils.toString(response.getEntity()));
+                return new JSONObject(EntityUtils.toString(response.getEntity()));
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            return jsonResponse;
         } else if (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_XML)) {
             try {
                 StringWriter writer = new StringWriter();
@@ -275,8 +269,6 @@ public class Base {
      */
     private static HttpResponse getResponse(String apiCall, String authToken, Map<String, String> params) {
         try {
-            //Create HTTP Client
-            HttpClient httpClient = HttpClientBuilder.create().build();
 
             // Create HttpGet request
             HttpGet getRequest;
@@ -296,7 +288,7 @@ public class Base {
             getRequest.addHeader("Authorization", "Basic " + authToken);
 
             // Receive the response from AppSpider
-            return httpClient.execute(getRequest);
+            return CLIENT.execute(getRequest);
 
         } catch (ClientProtocolException e) {
             e.printStackTrace();
@@ -307,4 +299,6 @@ public class Base {
         }
         return null;
     }
+
+
 }
