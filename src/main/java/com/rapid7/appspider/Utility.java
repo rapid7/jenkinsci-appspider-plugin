@@ -10,7 +10,7 @@ import java.util.Objects;
 /**
  * various utility merthods that have no better home
  */
-public class Utility {
+class Utility {
 
     /**
      * Utility is not intended to be created but instead provides static utility methods

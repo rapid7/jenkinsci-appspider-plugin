@@ -2,11 +2,11 @@ package com.rapid7.appspider;
 
 import java.io.PrintStream;
 
-class PrintStreamLoggerFacade implements LoggerFacade {
+public class PrintStreamLoggerFacade implements LoggerFacade {
 
     private final PrintStream stream;
 
-    PrintStreamLoggerFacade(PrintStream stream) {
+    public PrintStreamLoggerFacade(PrintStream stream) {
         this.stream = stream;
     }
 

@@ -4,8 +4,10 @@
 
 package com.rapid7.appspider;
 
+import com.rapid7.appspider.datatransferobjects.ScanResult;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
+import net.sf.json.JSON;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -17,7 +19,7 @@ import java.util.*;
 
 public class ApiSerializer {
 
-    private LoggerFacade logger;
+    private final LoggerFacade logger;
 
     public ApiSerializer(LoggerFacade logger) {
         if (Objects.isNull(logger))
@@ -62,6 +64,45 @@ public class ApiSerializer {
         }
     }
 
+    public ScanResult getScanResult(JSONObject jsonObject) {
+        try {
+            return new ScanResult(jsonObject);
+        } catch (IllegalArgumentException e) {
+            logger.println(e.toString());
+            return new ScanResult(false, "");
+        }
+    }
+
+    /**
+     * returns the value of "IsSuccess" and "Result" from the provided jsonObject if non-null; otherwise, false
+     * @param jsonObject JSON object containing the "IsSuccess" value to extract
+     * @return value of "IsSuccess" from the provided jsonObject if non-null; otherwise, false
+     */
+    public boolean getResultIsSuccess(JSONObject jsonObject) {
+        return getBooleansFrom(jsonObject, "Result", "IsSuccess").orElse(false);
+    }
+
+    /**
+     * returns the value of "Status" from the provided jsonObject if non-null and Status is not empty;
+     * otherwise
+     * @param jsonObject JSON object containing "Status" key
+     * @return Optional containing value of "Status" from jsonObject if not empty on success; otherwise,
+     *         Optional.empty()
+     */
+    public Optional<String> getStatus(JSONObject jsonObject) {
+        try {
+            if (Objects.isNull(jsonObject))
+                return Optional.empty();
+            String status = jsonObject.getString("Status");
+            return Objects.isNull(status) || status.isEmpty()
+                ? Optional.empty()
+                : Optional.of(status);
+        } catch (JSONException e) {
+            logger.println(e.toString());
+            return Optional.empty();
+        }
+    }
+
     /**
      * returns the JSONObject for the item in configs with "Name" matching name if found;
      * otherwise Optional.empty()
@@ -97,17 +138,16 @@ public class ApiSerializer {
             return Optional.empty();
         List<String> names = new ArrayList<>();
         for (Object object : configs) {
-            if (!(object instanceof JSONObject))
-                continue;
-            JSONObject config = (JSONObject)object;
-            try {
-                String name = config.getString("Name");
-                if (Objects.isNull(name) || name.isEmpty())
-                    continue;
-                names.add(name);
-            } catch (JSONException e) {
-                logger.println(e.toString());
-                e.printStackTrace();
+            if ((object instanceof JSONObject)) {
+                JSONObject config = (JSONObject) object;
+                try {
+                    String name = config.getString("Name");
+                    if (Objects.isNull(name) || name.isEmpty())
+                        continue;
+                    names.add(name);
+                } catch (JSONException e) {
+                    logger.println(e.toString());
+                }
             }
         }
         return Optional.of(names);
@@ -167,4 +207,19 @@ public class ApiSerializer {
             return Optional.empty();
         }
     }
+
+    /**
+     * returns true if all given keys in jsonObject are true
+     * @param jsonObject json object containing keys
+     * @param keys keys for the boolean fields of jsonObject
+     * @return true if all keys are present and true
+     */
+    public Optional<Boolean> getBooleansFrom(JSONObject jsonObject, String... keys) {
+        return Objects.isNull(jsonObject)
+                ? Optional.empty()
+                : Optional
+                    .of(Arrays.stream(keys)
+                    .allMatch(jsonObject::getBoolean));
+    }
+
 }

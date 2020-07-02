@@ -4,6 +4,7 @@
 
 package com.rapid7.appspider;
 
+import com.rapid7.appspider.datatransferobjects.ScanResult;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
@@ -13,6 +14,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Map;
@@ -23,42 +25,51 @@ import java.util.Optional;
  * Provides methods to communicating with AppSpider Enterprise while obsuring the implementation
  * details of that communication.
  */
-class EnterpriseClient {
+public class EnterpriseClient {
 
     private final String restEndPointUrl;
-    private final HttpClientService clientHelper;
+    private final HttpClientService clientService;
     private final LoggerFacade logger;
     private final ApiSerializer apiSerializer;
-    private final static String AUTHENTICATION_LOGIN = "/Authentication/Login";
-    private JsonHelper jsonHelper;
+    private final ContentHelper contentHelper;
 
     /**
      * Instantiates a new instance of the EnterpriseClient class
-     * @param clientHelper helper that works directly with lower level HttpClient methods
+     * @param clientService helper that works directly with lower level HttpClient methods
      * @param restEndPointUrl base endpoint including /rest/v1 or equilvalent path
      * @param logger logger used for diagnostic output
      * @throws IllegalArgumentException thrown if any of the arguments are null or if restEntPointUrl is empty
      */
-    public EnterpriseClient(HttpClientService clientHelper, String restEndPointUrl, ApiSerializer apiSerializer, JsonHelper jsonHelper, LoggerFacade logger) {
+    public EnterpriseClient(HttpClientService clientService, String restEndPointUrl, ApiSerializer apiSerializer, ContentHelper contentHelper, LoggerFacade logger) {
 
         if (Objects.isNull(restEndPointUrl) || restEndPointUrl.isEmpty())
             throw new IllegalArgumentException("restEndPointUrl cannot be null or empty");
-        if (Objects.isNull(clientHelper))
+        if (Objects.isNull(clientService))
             throw new IllegalArgumentException("clientHelper cannot be null or empty");
         if (Objects.isNull(apiSerializer))
             throw new IllegalArgumentException("apiSerializer cannot be null or empty");
-        if (Objects.isNull(jsonHelper))
+        if (Objects.isNull(contentHelper))
             throw new IllegalArgumentException("jsonHelper cannot be null");
         if (Objects.isNull(logger))
             throw new IllegalArgumentException("logger cannot be null");
 
         this.restEndPointUrl = restEndPointUrl;
-        this.clientHelper = clientHelper;
+        this.clientService = clientService;
         this.apiSerializer = apiSerializer;
-        this.jsonHelper = jsonHelper;
+        this.contentHelper = contentHelper;
         this.logger = logger;
     }
 
+
+    /**
+     * returns the full URL for the enterprise rest endpoint
+     * @return the full URL for the enterprise rest endpoint
+     */
+    public String getUrl() {
+        return restEndPointUrl;
+    }
+
+    private static final String AUTHENTICATION_LOGIN = "/Authentication/Login";
     /**
      * calls the /Authentication/Login endpoint with provided details
      * @param username Username
@@ -74,13 +85,13 @@ class EnterpriseClient {
             throw new IllegalArgumentException("password cannot be null or empty");
 
         try {
-            return clientHelper
+            return clientService
                 .buildPostRequestUsingApplicationJson(
                     endPoint,
-                    jsonHelper.entityFrom(
-                            jsonHelper.pairFrom("name", username),
-                            jsonHelper.pairFrom("password", password)))
-                .flatMap(request -> clientHelper.executeRequest(request)
+                    contentHelper.entityFrom(
+                            contentHelper.pairFrom("name", username),
+                            contentHelper.pairFrom("password", password)))
+                .flatMap(request -> clientService.executeJsonRequest(request)
                     .flatMap(apiSerializer::getTokenOrEmpty));
         } catch (UnsupportedEncodingException | JSONException e) {
             logger.println(e.toString());
@@ -88,21 +99,31 @@ class EnterpriseClient {
         }
     }
 
+    /**
+     * calls the /Authentication/Login endpoint with provided details returning true if credentials are valid
+     * @param username Username
+     * @param password Password
+     * @return true if endpoint returns authorization token; otherwise, false
+     */
+    public boolean testAuthentication(String username, String password) {
+        return login(username, password).isPresent();
+    }
+
     // <editor-fold desc="Engine Group APIs">
-    private final static String GET_ALL_ENGINE_GROUPS = "/EngineGroup/GetAllEngineGroups";
-    private final static String GET_ENGINE_GROUPS_FOR_CLIENT = "/EngineGroup/GetEngineGroupsForClient";
+    private static final String GET_ALL_ENGINE_GROUPS = "/EngineGroup/GetAllEngineGroups";
+    private static final String GET_ENGINE_GROUPS_FOR_CLIENT = "/EngineGroup/GetEngineGroupsForClient";
 
     public Optional<Map<String, String>> getAllEngineGroups(String authToken) {
-        return clientHelper
+        return clientService
             .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_ALL_ENGINE_GROUPS, authToken)
-            .flatMap(get -> jsonHelper.asMapOfStringToString(clientHelper.executeRequest(get)));
+            .flatMap(get -> contentHelper.asMapOfStringToString(clientService.executeJsonRequest(get)));
     }
     public Optional<Map<String,String>> getEngineGroupsForClient(String authToken) {
-        return clientHelper
+        return clientService
             .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_ENGINE_GROUPS_FOR_CLIENT, authToken)
-            .flatMap(get -> jsonHelper.asMapOfStringToString(clientHelper.executeRequest(get)));
+            .flatMap(get -> contentHelper.asMapOfStringToString(clientService.executeJsonRequest(get)));
     }
-    public Optional<String[]> getEngineNameGroupForClient(String authToken) {
+    public Optional<String[]> getEngineNamesGroupForClient(String authToken) {
         return getEngineGroupsForClient(authToken)
                 .map(map -> new ArrayList<>(map.keySet()))
                 .map(Utility::toStringArray);
@@ -113,32 +134,84 @@ class EnterpriseClient {
     // </editor-fold>
 
     // <editor-fold desc="Scan APIs">
-    private final static String RUN_SCAN = "/Scan/RunScan";
+    private static final String RUN_SCAN = "/Scan/RunScan";
+    private static final String GET_SCAN_STATUS = "/Scan/GetScanStatus";
+    private static final String IS_SCAN_FINISHED = "/Scan/IsScanFinished";
+    private static final String HAS_REPORT = "/Scan/HasReport";
 
-    public boolean runScanByConfigId(String authToken, String configId) {
-        return clientHelper
+    /**
+     * starts a new scan using configuration matching configId
+     * @param authToken authorization token required to execute request
+     * @param configId id of the config to run
+     * @return ScanResult containing details on the success of the request and if successful the
+     *         unique id of the scan
+     */
+    public ScanResult runScanByConfigId(String authToken, String configId) {
+        return clientService
             .buildPostRequestUsingFormUrlEncoding(
                     restEndPointUrl + RUN_SCAN,
                     authToken,
                     new BasicNameValuePair("configId", configId))
-            .flatMap(clientHelper::executeRequest)
-            .map(apiSerializer::getIsSuccess)
-            .orElse(false);
+            .flatMap(clientService::executeJsonRequest)
+            .map(apiSerializer::getScanResult)
+            .orElse(new ScanResult(false, ""));
     }
 
-    public boolean runScanByConfigName(String authToken, String configName) {
+    /**
+     * starts a new scan using configuration matching configName
+     * @param authToken authorization token required to execute request
+     * @param configName name of the config to run
+     * @return ScanResult containing details on the success of the request and if successful the
+     *         unique id of the scan
+     */
+    public ScanResult runScanByConfigName(String authToken, String configName) {
         return getConfigByName(authToken, configName)
             .flatMap(apiSerializer::getScanConfigId)
             .map(configId -> runScanByConfigId(authToken, configId))
-            .orElse(false);
+            .orElse(new ScanResult(false, ""));
     }
 
+    /**
+     * gets the current status of the scan identified by scanId
+     * @param authToken authorization token required to execute request
+     * @param scanId unique scan identifier of the scan
+     * @return Optional containing current scan status as String on success; Otherwise Optional.empty()
+     */
     public Optional<String> getScanStatus(String authToken, String scanId) {
-        return Optional.empty();
+        return clientService
+            .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_SCAN_STATUS, authToken, contentHelper.pairFrom("scanId", scanId))
+            .flatMap(clientService::executeJsonRequest)
+            .flatMap(apiSerializer::getStatus);
     }
-    public Optional<Boolean> isScanFinished(String authToken, String scanId) {
-        return Optional.empty();
+
+    /**
+     * determines if the scan identified by scanId has finished
+     * @param authToken authorization token required to execute request
+     * @param scanId unique scan identifier of the scan
+     * @return true if scan has finished regardless of how it finished, or false if it hasn't
+     */
+    public boolean isScanFinished(String authToken, String scanId) {
+        return resultAndIsSuccessProvider(restEndPointUrl + IS_SCAN_FINISHED, authToken, scanId);
     }
+
+    /**
+     * determines if a scan identified by scanId has a report or not
+     * @param authToken authorization token required to execute request
+     * @param scanId unique scan identifier of the scan
+     * @return true if the scan has a report; otherwise, false
+     */
+    public boolean hasReport(String authToken, String scanId) {
+        return resultAndIsSuccessProvider(restEndPointUrl + HAS_REPORT, authToken, scanId);
+    }
+
+    private boolean resultAndIsSuccessProvider(String endpoint, String authToken, String scanId) {
+        return clientService
+                .buildGetRequestUsingFormUrlEncoding(endpoint, authToken, contentHelper.pairFrom("scanId", scanId))
+                .flatMap(clientService::executeJsonRequest)
+                .map(apiSerializer::getResultIsSuccess)
+                .orElse(false);
+    }
+
     // </editor-fold>
 
     // <editor-fold desc="Config APIs">
@@ -163,10 +236,10 @@ class EnterpriseClient {
      * @return Optional containing JSONArray on success; otherwise Optional.empty()
      */
     public Optional<JSONArray> getConfigs(String authToken) {
-        return clientHelper
+        return clientService
             .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_CONFIGS, authToken)
-            .flatMap(clientHelper::executeRequest)
-            .flatMap(configsObject -> jsonHelper.getArrayFrom(configsObject, "Configs"));
+            .flatMap(clientService::executeJsonRequest)
+            .flatMap(configsObject -> contentHelper.getArrayFrom(configsObject, "Configs"));
     }
 
     /**
@@ -195,21 +268,21 @@ class EnterpriseClient {
                     "src/main/java/com/rapid7/appspider/template/scanConfigTemplate.ftl");
 
             String scanConfigXml = apiSerializer.getScanConfigXml(template, name, url);
-            return clientHelper
+            return clientService
                     .buildPostRequestUsingFormUrlEncoding(
                             restEndPointUrl + SAVE_CONFIG,
                             authToken,
-                            jsonHelper.pairFrom("defendEnabled", "true"),
-                            jsonHelper.pairFrom("monitoringDelay", "0"),
-                            jsonHelper.pairFrom("monitoringTriggerScan", "true"),
-                            jsonHelper.pairFrom("id", "null"),
-                            jsonHelper.pairFrom("name",name),
-                            jsonHelper.pairFrom("clientId", "null"),
-                            jsonHelper.pairFrom("engineGroupId",engineGroupId),
-                            jsonHelper.pairFrom("monitoring", "true"),
-                            jsonHelper.pairFrom("isApproveRequired", "false"),
-                            jsonHelper.pairFrom("scanconfigxml", scanConfigXml))
-                    .flatMap(clientHelper::executeRequest)
+                            contentHelper.pairFrom("defendEnabled", "true"),
+                            contentHelper.pairFrom("monitoringDelay", "0"),
+                            contentHelper.pairFrom("monitoringTriggerScan", "true"),
+                            contentHelper.pairFrom("id", "null"),
+                            contentHelper.pairFrom("name",name),
+                            contentHelper.pairFrom("clientId", "null"),
+                            contentHelper.pairFrom("engineGroupId",engineGroupId),
+                            contentHelper.pairFrom("monitoring", "true"),
+                            contentHelper.pairFrom("isApproveRequired", "false"),
+                            contentHelper.pairFrom("scanconfigxml", scanConfigXml))
+                    .flatMap(clientService::executeJsonRequest)
                     .map(apiSerializer::getIsSuccess)
                     .orElse(false);
 
@@ -217,6 +290,39 @@ class EnterpriseClient {
             logger.println(e.toString());
             return false;
         }
+    }
+
+    // </editor-fold>
+
+    // <editor-fold desc="Report APIs">
+    private final static String GET_VULNERABILITIES_SUMMARY = "/Report/GetVulnerabilitiesSummaryXml";
+    private final static String GET_REPORT_ZIP = "/Report/GetReportZip";
+
+    /**
+     * gets the vulnerability summary XML as a String
+     * @param authToken authorization token required to execute request
+     * @param scanId unique scan identifier of the scan to provide report for
+     * @return Optional containing the vulnerability summary as XML String on success;
+     *         otherwise, Optional.empty()
+     */
+    public Optional<String> getVulnerabilitiesSummaryXml(String authToken, String scanId) {
+        return clientService
+            .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_VULNERABILITIES_SUMMARY, authToken, contentHelper.pairFrom("scanId", scanId))
+            .flatMap(clientService::executeEntityRequest)
+            .flatMap(contentHelper::getTextHtmlOrXmlContent);
+    }
+
+    /**
+     * provides InputStream for the request report zip
+     * @param authToken authorization token required to execute request
+     * @param scanId unique scan identifier of the scan to provide report for
+     * @return Optional containing InputStream on success; otherwise, Optional.empty()
+     */
+    public Optional<InputStream> getReportZip(String authToken, String scanId) {
+        return clientService
+            .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_REPORT_ZIP, authToken, contentHelper.pairFrom("scanId", scanId))
+            .flatMap(clientService::executeEntityRequest)
+            .flatMap(contentHelper::getInputStream);
     }
 
     // </editor-fold>

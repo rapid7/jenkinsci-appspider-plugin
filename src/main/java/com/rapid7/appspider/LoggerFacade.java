@@ -1,5 +1,5 @@
 package com.rapid7.appspider;
 
-interface LoggerFacade {
+public interface LoggerFacade {
     void println(String message);
 }

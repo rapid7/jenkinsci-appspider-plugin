@@ -1,17 +1,22 @@
+/*
+ * Copyright © 2003 - 2019 Rapid7, Inc.  All rights reserved.
+ */
+
 package com.rapid7.appspider;
 
 /**
  * Storage class for scan settings provided by Jenkins
  */
-class ScanSettings {
+public class ScanSettings {
 
     private final String configName;
     private final String reportName;
-    private final Boolean enableScan;
-    private final Boolean generateReport;
+    private final boolean enableScan;
+    private final boolean generateReport;
     private final String scanConfigName;
     private final String scanConfigUrl;
     private final String scanConfigEngineGroupName;
+    private final int statusPollTime;
 
     /**
      * Constructs a DTO style container object storing scan settings from Jenkins
@@ -23,7 +28,7 @@ class ScanSettings {
      * @param scanConfigUrl URL of the scan configuration
      * @param scanConfigEngineGroupName name of the engine group to run the scan under
      */
-    ScanSettings(String configName, String reportName,
+    public ScanSettings(String configName, String reportName,
                  Boolean enableScan, Boolean generateReport,
                  String scanConfigName, String scanConfigUrl,
                  String scanConfigEngineGroupName) {
@@ -35,6 +40,7 @@ class ScanSettings {
         this.scanConfigName = scanConfigName;
         this.scanConfigUrl = scanConfigUrl;
         this.scanConfigEngineGroupName = scanConfigEngineGroupName;
+        this.statusPollTime = 90; // TODO: move this to configuration
     }
 
     public String getConfigName() {
@@ -43,10 +49,10 @@ class ScanSettings {
     public String getReportName() {
         return reportName;
     }
-    public Boolean getEnableScan() {
+    public boolean getEnableScan() {
         return enableScan;
     }
-    public Boolean getGenerateReport() {
+    public boolean getGenerateReport() {
         return generateReport;
     }
     public String getScanConfigName() {
@@ -54,5 +60,13 @@ class ScanSettings {
     }
     public String getScanConfigEngineGroupName() {
         return scanConfigEngineGroupName;
+    }
+
+    public String getScanConfigUrl() {
+        return scanConfigUrl;
+    }
+
+    public int getStatusPollTime() {
+        return statusPollTime;
     }
 }

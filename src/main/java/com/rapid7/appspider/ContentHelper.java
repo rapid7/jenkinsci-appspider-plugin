@@ -4,6 +4,7 @@
 
 package com.rapid7.appspider;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -16,18 +17,18 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import javax.ws.rs.core.MediaType;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class JsonHelper {
+public class ContentHelper {
 
-    private LoggerFacade logger;
+    private final LoggerFacade logger;
 
-    public JsonHelper(LoggerFacade logger) {
+    public ContentHelper(LoggerFacade logger) {
         if (Objects.isNull(logger))
             throw new IllegalArgumentException("logger cannot be null");
         this.logger = logger;
@@ -109,6 +110,7 @@ public class JsonHelper {
 
         return asJson(response.getEntity());
     }
+
     /**
      * converts the provided HttpEntity to a JSONObject
      * @param entity entity to convert
@@ -126,27 +128,63 @@ public class JsonHelper {
     }
     /**
      * extracts the key/value pairs from JSONObject and returns them as a Map{String, String}
-     * @param jsonObject JSONObject to extract key/value pairs from
+     * @param optionalJsonObject Optional{JSONObject} to extract key/value pairs from if present
      * @return on successs a Map{String, String} of key/value pairs from JSONObject;
      *         otherwiwse Optional.empty()
      */
-    public Optional<Map<String, String>> asMapOfStringToString(Optional<JSONObject> jsonObject) {
-        return jsonObject.flatMap(json ->
+    public Optional<Map<String, String>> asMapOfStringToString(Optional<JSONObject> optionalJsonObject) {
+        return optionalJsonObject.flatMap(json ->
         {
             try {
                 return Optional.of(json.getJSONArray("EngineGroups")
-                        .toList()
-                        .stream()
-                        .filter(obj -> obj instanceof JSONObject)
-                        .map(obj -> (JSONObject) obj)
-                        .collect(Collectors.toMap(
-                                obj -> obj.getString("Id"),
-                                obj -> obj.getString("Name"))));
+                    .toList()
+                    .stream()
+                    .filter(obj -> obj instanceof JSONObject)
+                    .map(obj -> (JSONObject) obj)
+                    .collect(Collectors.toMap(
+                        obj -> obj.getString("Id"),
+                        obj -> obj.getString("Name"))));
             } catch (JSONException e) {
                 logger.println(e.toString());
                 return Optional.empty();
             }
         });
+    }
 
+    /**
+     * returns text/html or text/html content from enttity if found; otherwise Optional.empty()
+     * @param entity entity containing the String content to return
+     * @return Optional containing the String content of entity on success; otherwise, Optional.empty()
+     */
+    public Optional<String> getTextHtmlOrXmlContent(HttpEntity entity) {
+        if (Objects.isNull(entity))
+            return Optional.empty();
+        String contentType = entity.getContentType().getValue();
+        if (!contentType.contains(MediaType.TEXT_HTML) && !contentType.contains(MediaType.TEXT_XML))
+            return Optional.empty();
+
+        try (StringWriter writer = new StringWriter()) {
+            IOUtils.copy(new InputStreamReader(entity.getContent(), StandardCharsets.UTF_8), writer);
+            return Optional.of(writer.toString());
+        } catch (IOException e) {
+            logger.println(e.toString());
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * returns InputStream for the content of entity
+     * @param entity entity to return InputStream of content for
+     * @return Optional containing InputStream on success; otherwise, Optional.empty()
+     */
+    public Optional<InputStream> getInputStream(HttpEntity entity) {
+        if (Objects.isNull(entity))
+            return Optional.empty();
+        try  {
+            return Optional.of(entity.getContent());
+        } catch (IOException e) {
+            logger.println(e.toString());
+            return Optional.empty();
+        }
     }
 }
