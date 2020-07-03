@@ -58,6 +58,7 @@ public class Scan {
         } else {
             log.println(String.format("Scan for '%s' successfully started.",  settings.getConfigName()));
         }
+        id = Optional.of(runResult.getScanId());
 
         if (!settings.getGenerateReport()) {
             log.println("Continuing the build without generating the report.");

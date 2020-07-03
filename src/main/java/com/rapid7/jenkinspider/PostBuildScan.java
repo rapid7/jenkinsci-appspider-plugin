@@ -171,8 +171,6 @@ public class PostBuildScan extends Notifier {
     public static final class DescriptorImp extends BuildStepDescriptor<Publisher> {
 
         private String appSpiderEntUrl;
-        @SuppressWarnings("legacy setting, if removed there's a warning in jenkisn about it")
-        private String appSpiderApiKey;
         private String appSpiderUsername;
         private String appSpiderPassword;
         private boolean appSpiderAllowSelfSignedCertificate;
