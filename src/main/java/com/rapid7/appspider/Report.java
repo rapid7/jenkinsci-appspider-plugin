@@ -39,7 +39,7 @@ public class Report {
         this.log = log;
     }
 
-    public boolean SaveReport(String username, String password, String scanId, FilePath directory) {
+    public boolean saveReport(String username, String password, String scanId, FilePath directory) {
 
         if (Objects.isNull(directory))
             throw new IllegalArgumentException("directory cannot be null or empty");
@@ -59,25 +59,25 @@ public class Report {
         Path vulnerabiltiesFilename = Paths.get(reportFolder, settings.getReportName() + dateTimeStamp + ".xml");
         Path reportZipFilename = Paths.get(reportFolder, settings.getReportName() + dateTimeStamp +  ".zip");
 
-        return SaveVulnerabilities(authToken, scanId, vulnerabiltiesFilename) &&
-                SaveReportZip(authToken, scanId, reportZipFilename);
+        return saveVulnerabilities(authToken, scanId, vulnerabiltiesFilename) &&
+                saveReportZip(authToken, scanId, reportZipFilename);
     }
 
-    private boolean SaveVulnerabilities(String authToken, String scanId, Path file) {
+    private boolean saveVulnerabilities(String authToken, String scanId, Path file) {
 
         Optional<String> xml = client.getVulnerabilitiesSummaryXml(authToken, scanId);
         if (!xml.isPresent()) {
             log.println("Unable to retrieve vulnerabilities summary.");
             return false;
         }
-        return SaveXmlFile(file, xml.get());
+        return saveXmlFile(file, xml.get());
     }
-    private boolean SaveReportZip(String authToken, String scanId, Path file) {
+    private boolean saveReportZip(String authToken, String scanId, Path file) {
         return client.getReportZip(authToken, scanId)
-            .map(inputStream -> SaveInputStreamToFile(file, inputStream))
+            .map(inputStream -> saveInputStreamToFile(file, inputStream))
             .orElse(false);
     }
-    private boolean SaveXmlFile(Path file, String content) {
+    private boolean saveXmlFile(Path file, String content) {
         try {
             if (!Files.exists(file) )
                 file = Files.createFile(file);
@@ -92,7 +92,7 @@ public class Report {
             return false;
         }
     }
-    private boolean SaveInputStreamToFile(Path file, InputStream inputStream) {
+    private boolean saveInputStreamToFile(Path file, InputStream inputStream) {
         if (Objects.isNull(inputStream))
             return false;
 

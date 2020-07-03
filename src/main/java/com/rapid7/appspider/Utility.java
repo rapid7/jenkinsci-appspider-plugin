@@ -14,6 +14,9 @@ import java.util.Objects;
  */
 public class Utility {
 
+    private Utility() {
+    }
+
     /**
      * converts ArrayList{String} to String[]
      * @param source list to convert to array

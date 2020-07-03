@@ -172,6 +172,7 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
     }
 
     private static final String GET_SCAN_STATUS = "/Scan/GetScanStatus";
+    private static final String SCAN_ID = "scanId";
     /**
      * gets the current status of the scan identified by scanId
      * @param authToken authorization token required to execute request
@@ -181,7 +182,7 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
     @Override
     public Optional<String> getScanStatus(String authToken, String scanId) {
         return clientService
-            .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_SCAN_STATUS, authToken, contentHelper.pairFrom("scanId", scanId))
+            .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_SCAN_STATUS, authToken, contentHelper.pairFrom(SCAN_ID, scanId))
             .flatMap(clientService::executeJsonRequest)
             .flatMap(apiSerializer::getStatus);
     }
@@ -232,7 +233,7 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
 
     private boolean resultAndIsSuccessProvider(String endpoint, String authToken, String scanId) {
         return clientService
-                .buildGetRequestUsingFormUrlEncoding(endpoint, authToken, contentHelper.pairFrom("scanId", scanId))
+                .buildGetRequestUsingFormUrlEncoding(endpoint, authToken, contentHelper.pairFrom(SCAN_ID, scanId))
                 .flatMap(clientService::executeJsonRequest)
                 .map(apiSerializer::getResultIsSuccess)
                 .orElse(false);
@@ -325,8 +326,8 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
     // </editor-fold>
 
     // <editor-fold desc="Report APIs">
-    private final static String GET_VULNERABILITIES_SUMMARY = "/Report/GetVulnerabilitiesSummaryXml";
-    private final static String GET_REPORT_ZIP = "/Report/GetReportZip";
+    private static final String GET_VULNERABILITIES_SUMMARY = "/Report/GetVulnerabilitiesSummaryXml";
+    private static final String GET_REPORT_ZIP = "/Report/GetReportZip";
 
     /**
      * gets the vulnerability summary XML as a String
@@ -338,7 +339,7 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
     @Override
     public Optional<String> getVulnerabilitiesSummaryXml(String authToken, String scanId) {
         return clientService
-            .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_VULNERABILITIES_SUMMARY, authToken, contentHelper.pairFrom("scanId", scanId))
+            .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_VULNERABILITIES_SUMMARY, authToken, contentHelper.pairFrom(SCAN_ID, scanId))
             .flatMap(clientService::executeEntityRequest)
             .flatMap(contentHelper::getTextHtmlOrXmlContent);
     }
@@ -352,7 +353,7 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
     @Override
     public Optional<InputStream> getReportZip(String authToken, String scanId) {
         return clientService
-            .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_REPORT_ZIP, authToken, contentHelper.pairFrom("scanId", scanId))
+            .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_REPORT_ZIP, authToken, contentHelper.pairFrom(SCAN_ID, scanId))
             .flatMap(clientService::executeEntityRequest)
             .flatMap(contentHelper::getInputStream);
     }

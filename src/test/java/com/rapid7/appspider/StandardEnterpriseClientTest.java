@@ -24,7 +24,7 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-public class StandardEnterpriseClientTest {
+class StandardEnterpriseClientTest {
 
     private LoggerFacade logger;
     private ContentHelper contentHelper;
@@ -66,7 +66,7 @@ public class StandardEnterpriseClientTest {
     }
 
     @Test
-    public void testAuthenticationReturnsTrueWhenCredentialsAreValid() throws IOException {
+    void testAuthenticationReturnsTrueWhenCredentialsAreValid() throws IOException {
         arrangeExpectedValues(true)
             .configureLogin(true)
             .configureEnterpriseClient();
@@ -75,7 +75,7 @@ public class StandardEnterpriseClientTest {
     }
 
     @Test
-    public void testAuthenticationReturnsFalseWhenCredentialsAreInvalid() throws IOException {
+    void testAuthenticationReturnsFalseWhenCredentialsAreInvalid() throws IOException {
         arrangeExpectedValues(false)
             .configureLogin(false)
             .configureEnterpriseClient();
@@ -85,7 +85,7 @@ public class StandardEnterpriseClientTest {
     }
 
     @Test
-    public void loginHasTokenWhenCredentialsAreValid() throws IOException {
+    void loginHasTokenWhenCredentialsAreValid() throws IOException {
         arrangeExpectedValues(true)
             .configureLogin(true)
             .configureEnterpriseClient();
@@ -93,7 +93,7 @@ public class StandardEnterpriseClientTest {
     }
 
     @Test
-    public void loginTokenHasExpectedValueWhenCredentialsAreValid() throws IOException {
+    void loginTokenHasExpectedValueWhenCredentialsAreValid() throws IOException {
         arrangeExpectedValues(true)
             .configureLogin(true)
             .configureEnterpriseClient();
@@ -102,7 +102,7 @@ public class StandardEnterpriseClientTest {
     }
 
     @Test
-    public void loginTokenNotPresentWhenCredentialsAreInvalid() throws IOException {
+    void loginTokenNotPresentWhenCredentialsAreInvalid() throws IOException {
         arrangeExpectedValues(false)
             .configureLogin(false)
             .configureEnterpriseClient();
@@ -110,7 +110,7 @@ public class StandardEnterpriseClientTest {
     }
 
     @Test
-    public void runScanConfigByNameIsSuccessWhenConfigFoundAndScanCreated() throws IOException {
+    void runScanConfigByNameIsSuccessWhenConfigFoundAndScanCreated() throws IOException {
         arrangeExpectedValues(true)
             .configureGetConfigs(true)
             .configureRunScanByConfigId(true)
@@ -122,7 +122,7 @@ public class StandardEnterpriseClientTest {
     }
 
     @Test
-    public void runScanConfigByNameHasScanIdWhenConfigFoundAndScanCreated() throws IOException {
+    void runScanConfigByNameHasScanIdWhenConfigFoundAndScanCreated() throws IOException {
         arrangeExpectedValues(true)
             .configureGetConfigs(true)
             .configureRunScanByConfigId(true)

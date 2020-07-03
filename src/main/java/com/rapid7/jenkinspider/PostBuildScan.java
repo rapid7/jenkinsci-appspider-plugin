@@ -19,30 +19,30 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
-import javax.servlet.ServletException;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Created by nbugash on 20/07/15.
  */
 public class PostBuildScan extends Notifier {
 
-    private String configName;  // Not set to final since it may change
+    private final String configName;  // Not set to final since it may change
                                 // if user decided to create a new scan config
 
     private final String reportName;
-    private final Boolean enableScan;
-    private final Boolean generateReport;
+    private final boolean enableScan;
+    private final boolean generateReport;
 
-    private String scanConfigName;
-    private String scanConfigUrl;
-    private String scanConfigEngineGroupName;
+    private final String scanConfigName;
+    private final String scanConfigUrl;
+    private final String scanConfigEngineGroupName;
 
     @DataBoundConstructor
     public PostBuildScan(String configName, String reportName,
@@ -94,7 +94,7 @@ public class PostBuildScan extends Notifier {
      * @return boolean representing success or failure of the action to perform
      */
     @Override
-    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) {
+    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
 
         LoggerFacade log = new PrintStreamLoggerFacade(listener.getLogger());
 
@@ -141,11 +141,9 @@ public class PostBuildScan extends Notifier {
                 return false;
             }
 
-            Report report = new Report(client, settings, log);
-            if (!report.SaveReport(appSpiderUsername, appSpiderPassword, scanId, filePath))
-                return false;
+            return new Report(client, settings, log)
+                .saveReport(appSpiderUsername, appSpiderPassword, scanId, filePath);
 
-            return true;
         } catch (IllegalArgumentException e) {
             log.println(e.toString());
             return false;
@@ -173,7 +171,8 @@ public class PostBuildScan extends Notifier {
     public static final class DescriptorImp extends BuildStepDescriptor<Publisher> {
 
         private String appSpiderEntUrl;
-        private String appSpiderApiKey; // legacy setting, if removed there's a warning in jenkisn about it
+        @SuppressWarnings("legacy setting, if removed there's a warning in jenkisn about it")
+        private String appSpiderApiKey;
         private String appSpiderUsername;
         private String appSpiderPassword;
         private boolean appSpiderAllowSelfSignedCertificate;
@@ -195,8 +194,7 @@ public class PostBuildScan extends Notifier {
          * prevent the form from being saved. It just means that a message
          * will be displayed to the user.
          */
-        public FormValidation doCheckappSpiderEntUrl(@QueryParameter String value)
-                throws IOException, ServletException {
+        public FormValidation doCheckappSpiderEntUrl(@QueryParameter String value) {
             if (value.length() == 0)
                 return FormValidation.error("Please set a value");
             if (value.length() < 4)
@@ -250,7 +248,7 @@ public class PostBuildScan extends Notifier {
             ContentHelper contentHelper = new ContentHelper(logger);
             return new StandardEnterpriseClient(
                     new HttpClientService(httpClient, contentHelper, logger),
-                    appSpiderEntUrl,
+                    endpoint,
                     new ApiSerializer(logger),
                     contentHelper,
                     logger);
@@ -275,9 +273,7 @@ public class PostBuildScan extends Notifier {
             scanConfigNames = getConfigNames();
             ListBoxModel items = new ListBoxModel();
             items.add("[Select a scan config name]"); // Adding a default "Pick a scan configuration" entry
-            for (int i = 0; i < scanConfigNames.length; i++) {
-                items.add(scanConfigNames[i]);
-            }
+            items.addAll(Arrays.stream(scanConfigEngines).map(ListBoxModel.Option::new).collect(Collectors.toList()));
             return items;
         }
 
@@ -290,9 +286,7 @@ public class PostBuildScan extends Notifier {
             scanConfigEngines = getEngineGroups();
             ListBoxModel items = new ListBoxModel();
             items.add("[Select an engine group name]"); // Adding a default "Pick a engine group name" entry
-            for (int i = 0; i < scanConfigEngines.length; i++ ) {
-                items.add(scanConfigEngines[i]);
-            }
+            items.addAll(Arrays.stream(scanConfigEngines).map(ListBoxModel.Option::new).collect(Collectors.toList()));
             return items;
         }
 
@@ -305,7 +299,7 @@ public class PostBuildScan extends Notifier {
         public FormValidation doTestCredentials(@QueryParameter("appSpiderEntUrl") final String appSpiderEntUrl,
                                                 @QueryParameter("appSpiderUsername") final String appSpiderUsername,
                                                 @QueryParameter("appSpiderPassword") final String appSpiderPassword) {
-            return executeRequest(client -> {
+            return executeRequest(appSpiderEntUrl, client -> {
                 if (client.testAuthentication(appSpiderUsername, appSpiderPassword)) {
                     return FormValidation.error("Invalid username / password combination");
                 } else {
@@ -334,11 +328,7 @@ public class PostBuildScan extends Notifier {
                     return FormValidation.error("Invalid url. Check the protocol (i.e http/https) or the port.");
                 }
                 return FormValidation.ok("Valid scan configuration name and url.");
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-                return FormValidation.error("Unable to connect to \"" + scanConfigUrl +"\". Try again in a few mins or " +
-                        "try another url");
-            } catch (IOException e) {
+            } catch (IOException /* | MalformedURLException */ e) {
                 e.printStackTrace();
                 return FormValidation.error("Unable to connect to \"" + scanConfigUrl +"\". Try again in a few mins or " +
                         "try another url");
@@ -369,12 +359,12 @@ public class PostBuildScan extends Notifier {
                 new String[0]);
         }
 
-        private <T> T executeRequest(Function<EnterpriseClient, T> supplier, T errorResult) {
+        private <T> T executeRequest(String endpoint,  Function<EnterpriseClient, T> supplier, T errorResult) {
             if (Objects.isNull(supplier))
                 return errorResult;
 
             try (CloseableHttpClient httpClient = new HttpClientFactory(appSpiderAllowSelfSignedCertificate).getClient()) {
-                EnterpriseClient client = buildEnterpriseClient(httpClient, appSpiderEntUrl);
+                EnterpriseClient client = buildEnterpriseClient(httpClient, endpoint);
                 return supplier.apply(client);
             } catch (IOException e) {
                 e.printStackTrace();

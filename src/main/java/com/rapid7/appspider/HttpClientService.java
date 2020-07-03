@@ -76,6 +76,8 @@ public class HttpClientService implements ClientService {
         }
     }
 
+    private static final String BASIC_AUTHENTICATION_FORMAT = "Basic %s";
+
     /**
      * Builds a HttpGet request object for the endpoint given by endpoint using authToken as basic authentication header
      * @param endpoint endpoint to perform get request on
@@ -89,7 +91,7 @@ public class HttpClientService implements ClientService {
 
         HttpGet request = new HttpGet(endpoint);
         request.addHeader(HttpHeaders.CONTENT_TYPE,  MediaType.APPLICATION_FORM_URLENCODED);
-        request.addHeader(HttpHeaders.AUTHORIZATION, "Basic " + authToken);
+        request.addHeader(HttpHeaders.AUTHORIZATION, String.format(BASIC_AUTHENTICATION_FORMAT, authToken));
 
         return Optional.of(request);
     }
@@ -136,7 +138,7 @@ public class HttpClientService implements ClientService {
         HttpGet request = new HttpGet(endpoint);
         request.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON); // not strictly required but also no harm
         request.addHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON);
-        request.addHeader(HttpHeaders.AUTHORIZATION, "Basic " + authToken);
+        request.addHeader(HttpHeaders.AUTHORIZATION, String.format(BASIC_AUTHENTICATION_FORMAT, authToken));
         return Optional.of(request);
     }
 
@@ -171,7 +173,7 @@ public class HttpClientService implements ClientService {
 
         HttpPost request = new HttpPost(endpoint);
         request.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED);
-        request.addHeader(HttpHeaders.AUTHORIZATION, "Basic " + authToken);
+        request.addHeader(HttpHeaders.AUTHORIZATION, String.format(BASIC_AUTHENTICATION_FORMAT, authToken));
 
         try {
             request.setEntity(new UrlEncodedFormEntity(Arrays.asList(params)));

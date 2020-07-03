@@ -42,7 +42,7 @@ public class Scan {
         return id;
     }
 
-    public boolean process(String username, String password) {
+    public boolean process(String username, String password) throws InterruptedException {
         Optional<String> maybeAuthToken = client.login(username, password);
         if (!maybeAuthToken.isPresent()) {
             log.println(UNAUTHORIZED_ERROR);
@@ -56,7 +56,7 @@ public class Scan {
         if (!runResult.isSuccess()) {
             log.println(String.format("Error: Response from %s came back not successful",  client.getUrl()));
         } else {
-            log.println(String.format("Scan successfully started.",  client.getUrl()));
+            log.println(String.format("Scan for '%s' successfully started.",  client.getUrl()));
         }
 
         if (!settings.getGenerateReport()) {
@@ -64,8 +64,7 @@ public class Scan {
             return true;
         }
 
-        if (!waitForScanCompletion(runResult.getScanId(), username, password))
-            return false;
+        waitForScanCompletion(runResult.getScanId(), username, password);
 
         maybeAuthToken = client.login(username, password);
         if (!maybeAuthToken.isPresent()) {
@@ -114,7 +113,7 @@ public class Scan {
         }
     }
 
-    private boolean waitForScanCompletion(String scanId, String username, String password) {
+    private void waitForScanCompletion(String scanId, String username, String password) throws InterruptedException {
         String scanStatus;
         try {
             do {
@@ -125,11 +124,9 @@ public class Scan {
 
             } while (!scanStatus.matches(FINISHED_SCANNING));
 
-            return true;
-
         } catch (InterruptedException e) {
             log.println("Unexpected error occured: " + e.toString());
-            return false;
+            throw e;
         }
     }
     private Optional<String> getStatus(String scanId, String username, String password) {

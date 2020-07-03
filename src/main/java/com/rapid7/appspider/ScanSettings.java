@@ -41,7 +41,7 @@ public class ScanSettings {
         this.newConfigName = scanConfigName;
         this.newConfigUrl = scanConfigUrl;
         this.scanConfigEngineGroupName = scanConfigEngineGroupName;
-        this.statusPollTime = 90; // TODO: move this to configuration
+        this.statusPollTime = 90;
     }
 
     public String getConfigName() {
