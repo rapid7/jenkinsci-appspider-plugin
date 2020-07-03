@@ -56,7 +56,7 @@ public class Scan {
         if (!runResult.isSuccess()) {
             log.println(String.format("Error: Response from %s came back not successful",  client.getUrl()));
         } else {
-            log.println(String.format("Scan for successfully started.",  settings.getConfigName()));
+            log.println(String.format("Scan for '%s' successfully started.",  settings.getConfigName()));
         }
 
         if (!settings.getGenerateReport()) {
