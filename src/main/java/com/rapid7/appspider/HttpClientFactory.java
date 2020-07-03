@@ -1,6 +1,9 @@
+/*
+ * Copyright © 2003 - 2020 Rapid7, Inc.  All rights reserved.
+ */
+
 package com.rapid7.appspider;
 
-import org.apache.http.conn.ssl.AllowAllHostnameVerifier;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.CloseableHttpClient;

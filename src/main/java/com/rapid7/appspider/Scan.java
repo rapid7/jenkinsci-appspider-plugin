@@ -1,5 +1,5 @@
 /*
- * Copyright © 2003 - 2019 Rapid7, Inc.  All rights reserved.
+ * Copyright © 2003 - 2020 Rapid7, Inc.  All rights reserved.
  */
 
 package com.rapid7.appspider;
@@ -43,16 +43,17 @@ public class Scan {
     }
 
     public boolean process(String username, String password) {
-        Optional<String> authToken = client.login(username, password);
-        if (!authToken.isPresent()) {
+        Optional<String> maybeAuthToken = client.login(username, password);
+        if (!maybeAuthToken.isPresent()) {
             log.println(UNAUTHORIZED_ERROR);
             return false;
         }
-        createScanBeforeRunIfNeeded();
+        String authToken = maybeAuthToken.get();
+        createScanBeforeRunIfNeeded(authToken);
 
-        ScanResult runResult = client.runScanByConfigName(authToken.get(), settings.getConfigName());
+        ScanResult runResult = client.runScanByConfigName(authToken, settings.getConfigName());
         if (!runResult.isSuccess()) {
-            log.println("Error: Response from " + client.getUrl() + " came back not successful");
+            log.println(String.format("Error: Response from %s came back not successful",  client.getUrl()));
         }
         id = Optional.of(runResult.getScanId());
 
@@ -64,32 +65,50 @@ public class Scan {
         if (!waitForScanCompletion(runResult.getScanId(), username, password))
             return false;
 
-        authToken = client.login(username, password);
-        if (!authToken.isPresent()) {
+        maybeAuthToken = client.login(username, password);
+        if (!maybeAuthToken.isPresent()) {
             log.println(UNAUTHORIZED_ERROR);
             return false;
         }
+        authToken = maybeAuthToken.get();
 
-        if (!client.hasReport(authToken.get(), runResult.getScanId())) {
-            log.println("No reports for this scan: " + runResult.getScanId());
+        if (!client.hasReport(authToken, runResult.getScanId())) {
+            log.println(String.format("No reports for this scan: %s", runResult.getScanId()));
         }
 
-        String status = client.getScanStatus(authToken.get(), runResult.getScanId()).orElse(FAILED_SCAN);
+        String status = client.getScanStatus(authToken, runResult.getScanId()).orElse(FAILED_SCAN);
         log.println(status.matches(SUCCESSFUL_SCAN)
-            ? "Scan was complete but was not successful. Status was '" + status + "'"
-            : "Finished scanning!");
+            ? "Finished scanning!"
+            : String.format("Scan was complete but was not successful. Status was '%s'", status));
         return true;
     }
 
-    private void createScanBeforeRunIfNeeded() {
+    private boolean createScanBeforeRunIfNeeded(String authToken) {
          if ((Objects.isNull(settings.getConfigName()) || settings.getConfigName().isEmpty()) &&
-             (Objects.isNull(settings.getScanConfigUrl()) || settings.getScanConfigUrl().isEmpty())) {
-             return;
+             (Objects.isNull(settings.getNewConfigUrl()) || settings.getNewConfigUrl().isEmpty())) {
+             return true; // creation not needed
          }
 
         log.println("Value of Scan Config Name: " + settings.getConfigName());
-        log.println("Value of Scan Config URL: " + settings.getScanConfigUrl());
+        log.println("Value of Scan Config URL: " + settings.getNewConfigUrl());
         log.println("Value of Scan Config Engine Group name: " + settings.getScanConfigEngineGroupName());
+
+        Optional<String> engineGroupId = client.getEngineGroupIdFromName(authToken, settings.getScanConfigEngineGroupName());
+        if (!engineGroupId.isPresent()) {
+            log.println(String.format("no engine group matching %s was found.", settings.getScanConfigEngineGroupName()));
+            return false;
+        }
+
+        if  (client.saveConfig(authToken, settings.getNewConfigName(), settings.getNewConfigUrl(), engineGroupId.get())) {
+            settings.setConfigName(settings.getNewConfigName());
+            log.println(String.format("Successfully created the scan config %s", settings.getNewConfigName()));
+
+            settings.resetNewConfigValues();
+            return true;
+        } else {
+            log.println(String.format("An error occurred while attempting to save %s.", settings.getNewConfigName()));
+            return false;
+        }
     }
 
     private boolean waitForScanCompletion(String scanId, String username, String password) {

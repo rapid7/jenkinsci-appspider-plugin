@@ -1,5 +1,5 @@
 /*
- * Copyright © 2003 - 2019 Rapid7, Inc.  All rights reserved.
+ * Copyright © 2003 - 2020 Rapid7, Inc.  All rights reserved.
  */
 
 package com.rapid7.appspider;
@@ -7,7 +7,6 @@ package com.rapid7.appspider;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
@@ -25,6 +24,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.rapid7.appspider.Utility.isSuccessStatusCode;
+
+/**
+ * parsing and serializing helper methods for handling JSONObject manipulation
+ */
 public class ContentHelper {
 
     private final LoggerFacade logger;
@@ -105,11 +109,9 @@ public class ContentHelper {
      * @return on success an Optional containing a JSONObject; otherwise, Optional.empty()
      */
     public Optional<JSONObject> responseToJSONObject(HttpResponse response) {
-        int statusCode = response.getStatusLine().getStatusCode();
-        if (statusCode != HttpStatus.SC_OK)
-            throw new RuntimeException("Failed! HTTP error code: " + statusCode);
-
-        return asJson(response.getEntity());
+        return isSuccessStatusCode(response)
+            ? asJson(response.getEntity())
+            : Optional.empty();
     }
 
     /**
@@ -133,7 +135,7 @@ public class ContentHelper {
      * @return on successs a Map{String, String} of key/value pairs from JSONObject;
      *         otherwiwse Optional.empty()
      */
-    public Optional<Map<String, String>> asMapOfStringToString(Optional<JSONObject> optionalJsonObject) {
+    public Optional<Map<String, String>> asIdToNameMapOfStringToString(Optional<JSONObject> optionalJsonObject) {
         return optionalJsonObject.flatMap(json ->
         {
             try {

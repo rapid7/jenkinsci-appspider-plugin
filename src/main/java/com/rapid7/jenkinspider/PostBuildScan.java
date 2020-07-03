@@ -348,7 +348,7 @@ public class PostBuildScan extends Notifier {
 
         @FunctionalInterface
         interface AuthorizedRequest<T> {
-            public T executeRequest(StandardEnterpriseClient client, String authKey);
+            public T executeRequest(EnterpriseClient client, String authKey);
         }
 
         /**
@@ -369,12 +369,12 @@ public class PostBuildScan extends Notifier {
                 new String[0]);
         }
 
-        private <T> T executeRequest(Function<StandardEnterpriseClient, T> supplier, T errorResult) {
+        private <T> T executeRequest(Function<EnterpriseClient, T> supplier, T errorResult) {
             if (Objects.isNull(supplier))
                 return errorResult;
 
             try (CloseableHttpClient httpClient = new HttpClientFactory(appSpiderAllowSelfSignedCertificate).getClient()) {
-                StandardEnterpriseClient client = buildEnterpriseClient(httpClient, appSpiderEntUrl);
+                EnterpriseClient client = buildEnterpriseClient(httpClient, appSpiderEntUrl);
                 return supplier.apply(client);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -387,7 +387,7 @@ public class PostBuildScan extends Notifier {
                 return errorResult;
 
             try (CloseableHttpClient httpClient = new HttpClientFactory(appSpiderAllowSelfSignedCertificate).getClient()) {
-                StandardEnterpriseClient client = buildEnterpriseClient(httpClient, appSpiderEntUrl);
+                EnterpriseClient client = buildEnterpriseClient(httpClient, appSpiderEntUrl);
                 Optional<String> maybeAuthKey = client.login(appSpiderUsername, appSpiderPassword);
                 if (!maybeAuthKey.isPresent()) {
                     FormValidation.error("Unauthorized");

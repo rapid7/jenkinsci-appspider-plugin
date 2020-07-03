@@ -1,5 +1,5 @@
 /*
- * Copyright © 2003 - 2019 Rapid7, Inc.  All rights reserved.
+ * Copyright © 2003 - 2020 Rapid7, Inc.  All rights reserved.
  */
 
 package com.rapid7.appspider;
@@ -20,6 +20,8 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
+
+import static com.rapid7.appspider.Utility.isSuccessStatusCode;
 
 public class HttpClientService implements ClientService {
 
@@ -64,11 +66,9 @@ public class HttpClientService implements ClientService {
     public Optional<HttpEntity> executeEntityRequest(HttpRequestBase request) {
         try {
             HttpResponse response = httpClient.execute(request);
-            int statusCode = response.getStatusLine().getStatusCode();
-            if (statusCode != HttpStatus.SC_OK)
-                throw new RuntimeException("Failed! HTTP error code: " + statusCode);
-
-            return Optional.of(response.getEntity());
+            return isSuccessStatusCode(response)
+                ? Optional.of(response.getEntity())
+                : Optional.empty();
 
         } catch (IOException e) {
             logger.println(e.toString());

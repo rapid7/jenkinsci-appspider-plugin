@@ -1,8 +1,10 @@
 /*
- * Copyright © 2003 - 2019 Rapid7, Inc.  All rights reserved.
+ * Copyright © 2003 - 2020 Rapid7, Inc.  All rights reserved.
  */
 
 package com.rapid7.appspider;
+
+import org.apache.http.HttpResponse;
 
 import java.util.List;
 import java.util.Objects;
@@ -10,13 +12,7 @@ import java.util.Objects;
 /**
  * various utility merthods that have no better home
  */
-class Utility {
-
-    /**
-     * Utility is not intended to be created but instead provides static utility methods
-     */
-    private Utility() {
-    }
+public class Utility {
 
     /**
      * converts ArrayList{String} to String[]
@@ -32,4 +28,19 @@ class Utility {
     }
 
 
+    /**
+     * determines if the response was successful based on status code
+     * @param response HttpResponse object to check
+     * @return true if status code is in the 200 range; otherwise, false
+     */
+    public static boolean isSuccessStatusCode(HttpResponse response) {
+        if (Objects.isNull(response))
+            return false;
+
+        // https://www.w3.org/Protocols/HTTP/HTRESP.html
+        // while most if not all AppSpider Enterprise endpoints return 200 on success it's
+        // safer to treat any success code as success
+        int statusCode = response.getStatusLine().getStatusCode();
+        return statusCode >= 200 && statusCode <= 299;
+    }
 }

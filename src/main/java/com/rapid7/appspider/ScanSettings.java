@@ -1,5 +1,5 @@
 /*
- * Copyright © 2003 - 2019 Rapid7, Inc.  All rights reserved.
+ * Copyright © 2003 - 2020 Rapid7, Inc.  All rights reserved.
  */
 
 package com.rapid7.appspider;
@@ -9,12 +9,13 @@ package com.rapid7.appspider;
  */
 public class ScanSettings {
 
-    private final String configName;
+    private String configName;
     private final String reportName;
     private final boolean enableScan;
     private final boolean generateReport;
-    private final String scanConfigName;
-    private final String scanConfigUrl;
+
+    private String newConfigName;
+    private String newConfigUrl;
     private final String scanConfigEngineGroupName;
     private final int statusPollTime;
 
@@ -37,14 +38,17 @@ public class ScanSettings {
         this.reportName = reportName;
         this.enableScan = enableScan;
         this.generateReport = generateReport;
-        this.scanConfigName = scanConfigName;
-        this.scanConfigUrl = scanConfigUrl;
+        this.newConfigName = scanConfigName;
+        this.newConfigUrl = scanConfigUrl;
         this.scanConfigEngineGroupName = scanConfigEngineGroupName;
         this.statusPollTime = 90; // TODO: move this to configuration
     }
 
     public String getConfigName() {
         return configName;
+    }
+    public void setConfigName(String configName) {
+        this.configName = configName;
     }
     public String getReportName() {
         return reportName;
@@ -55,18 +59,23 @@ public class ScanSettings {
     public boolean getGenerateReport() {
         return generateReport;
     }
-    public String getScanConfigName() {
-        return scanConfigName;
+    public String getNewConfigName() {
+        return newConfigName;
     }
     public String getScanConfigEngineGroupName() {
         return scanConfigEngineGroupName;
     }
 
-    public String getScanConfigUrl() {
-        return scanConfigUrl;
+    public String getNewConfigUrl() {
+        return newConfigUrl;
     }
 
     public int getStatusPollTime() {
         return statusPollTime;
+    }
+
+    public void resetNewConfigValues() {
+        newConfigName = null;
+        newConfigUrl = null;
     }
 }

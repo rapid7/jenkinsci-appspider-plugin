@@ -1,5 +1,5 @@
 /*
- * Copyright © 2003 - 2019 Rapid7, Inc.  All rights reserved.
+ * Copyright © 2003 - 2020 Rapid7, Inc.  All rights reserved.
  */
 
 package com.rapid7.appspider;
@@ -113,57 +113,48 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
     }
 
     // <editor-fold desc="Engine Group APIs">
-    private static final String GET_ALL_ENGINE_GROUPS = "/EngineGroup/GetAllEngineGroups";
-    private static final String GET_ENGINE_GROUPS_FOR_CLIENT = "/EngineGroup/GetEngineGroupsForClient";
 
-    @Override
-    public Optional<Map<String, String>> getAllEngineGroups(String authToken) {
-        return clientService
-            .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_ALL_ENGINE_GROUPS, authToken)
-            .flatMap(get -> contentHelper.asMapOfStringToString(clientService.executeJsonRequest(get)));
-    }
-    @Override
-    public Optional<Map<String,String>> getEngineGroupsForClient(String authToken) {
-        return clientService
-            .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_ENGINE_GROUPS_FOR_CLIENT, authToken)
-            .flatMap(get -> contentHelper.asMapOfStringToString(clientService.executeJsonRequest(get)));
-    }
+    /**
+     * fetches the names of available engine groups
+     * @param authToken authorization token required to execute request
+     * @return On success an Optional containing an array of Strings
+     *         representing the names of available engine groups;
+     *         otherwise, Optional.empty()
+     */
     @Override
     public Optional<String[]> getEngineNamesGroupForClient(String authToken) {
         return getEngineGroupsForClient(authToken)
                 .map(map -> new ArrayList<>(map.keySet()))
                 .map(Utility::toStringArray);
     }
+
+    /**
+     * fetches the unique id of the engine group given by engineGroupName
+     * @param authToken authorization token required to execute request
+     * @param engineGroupName name of the engine to get the id of
+     * @return Optional containing the id of the engine group if found;
+     *         otherwise, Optional.empty()
+     */
     @Override
     public Optional<String> getEngineGroupIdFromName(String authToken, String engineGroupName) {
         return getAllEngineGroups(authToken).flatMap(map -> Optional.of(map.get(engineGroupName)));
     }
+
+    private static final String GET_ALL_ENGINE_GROUPS = "/EngineGroup/GetAllEngineGroups";
+    private static final String GET_ENGINE_GROUPS_FOR_CLIENT = "/EngineGroup/GetEngineGroupsForClient";
+    private Optional<Map<String, String>> getAllEngineGroups(String authToken) {
+        return clientService
+                .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_ALL_ENGINE_GROUPS, authToken)
+                .flatMap(get -> contentHelper.asIdToNameMapOfStringToString(clientService.executeJsonRequest(get)));
+    }
+    private Optional<Map<String,String>> getEngineGroupsForClient(String authToken) {
+        return clientService
+                .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_ENGINE_GROUPS_FOR_CLIENT, authToken)
+                .flatMap(get -> contentHelper.asIdToNameMapOfStringToString(clientService.executeJsonRequest(get)));
+    }
     // </editor-fold>
 
     // <editor-fold desc="Scan APIs">
-    private static final String RUN_SCAN = "/Scan/RunScan";
-    private static final String GET_SCAN_STATUS = "/Scan/GetScanStatus";
-    private static final String IS_SCAN_FINISHED = "/Scan/IsScanFinished";
-    private static final String HAS_REPORT = "/Scan/HasReport";
-
-    /**
-     * starts a new scan using configuration matching configId
-     * @param authToken authorization token required to execute request
-     * @param configId id of the config to run
-     * @return ScanResult containing details on the success of the request and if successful the
-     *         unique id of the scan
-     */
-    @Override
-    public ScanResult runScanByConfigId(String authToken, String configId) {
-        return clientService
-            .buildPostRequestUsingFormUrlEncoding(
-                    restEndPointUrl + RUN_SCAN,
-                    authToken,
-                    new BasicNameValuePair("configId", configId))
-            .flatMap(clientService::executeJsonRequest)
-            .map(apiSerializer::getScanResult)
-            .orElse(new ScanResult(false, ""));
-    }
 
     /**
      * starts a new scan using configuration matching configName
@@ -180,6 +171,7 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
             .orElse(new ScanResult(false, ""));
     }
 
+    private static final String GET_SCAN_STATUS = "/Scan/GetScanStatus";
     /**
      * gets the current status of the scan identified by scanId
      * @param authToken authorization token required to execute request
@@ -194,6 +186,8 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
             .flatMap(apiSerializer::getStatus);
     }
 
+    private static final String IS_SCAN_FINISHED = "/Scan/IsScanFinished";
+
     /**
      * determines if the scan identified by scanId has finished
      * @param authToken authorization token required to execute request
@@ -205,6 +199,7 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
         return resultAndIsSuccessProvider(restEndPointUrl + IS_SCAN_FINISHED, authToken, scanId);
     }
 
+    private static final String HAS_REPORT = "/Scan/HasReport";
     /**
      * determines if a scan identified by scanId has a report or not
      * @param authToken authorization token required to execute request
@@ -214,6 +209,25 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
     @Override
     public boolean hasReport(String authToken, String scanId) {
         return resultAndIsSuccessProvider(restEndPointUrl + HAS_REPORT, authToken, scanId);
+    }
+
+    private static final String RUN_SCAN = "/Scan/RunScan";
+    /**
+     * starts a new scan using configuration matching configId
+     * @param authToken authorization token required to execute request
+     * @param configId id of the config to run
+     * @return ScanResult containing details on the success of the request and if successful the
+     *         unique id of the scan
+     */
+    private ScanResult runScanByConfigId(String authToken, String configId) {
+        return clientService
+                .buildPostRequestUsingFormUrlEncoding(
+                        restEndPointUrl + RUN_SCAN,
+                        authToken,
+                        new BasicNameValuePair("configId", configId))
+                .flatMap(clientService::executeJsonRequest)
+                .map(apiSerializer::getScanResult)
+                .orElse(new ScanResult(false, ""));
     }
 
     private boolean resultAndIsSuccessProvider(String endpoint, String authToken, String scanId) {

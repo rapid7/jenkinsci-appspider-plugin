@@ -1,3 +1,7 @@
+/*
+ * Copyright © 2003 - 2020 Rapid7, Inc.  All rights reserved.
+ */
+
 package com.rapid7.appspider;
 
 import com.rapid7.appspider.datatransferobjects.ScanResult;
@@ -31,22 +35,23 @@ public interface EnterpriseClient {
      */
     boolean testAuthentication(String username, String password);
 
-    Optional<Map<String, String>> getAllEngineGroups(String authToken);
-
-    Optional<Map<String,String>> getEngineGroupsForClient(String authToken);
-
+    /**
+     * fetches the names of available engine groups
+     * @param authToken authorization token required to execute request
+     * @return On success an Optional containing an array of Strings
+     *         representing the names of available engine groups;
+     *         otherwise, Optional.empty()
+     */
     Optional<String[]> getEngineNamesGroupForClient(String authToken);
 
-    Optional<String> getEngineGroupIdFromName(String authToken, String engineGroupName);
-
     /**
-     * starts a new scan using configuration matching configId
+     * fetches the unique id of the engine group given by engineGroupName
      * @param authToken authorization token required to execute request
-     * @param configId id of the config to run
-     * @return ScanResult containing details on the success of the request and if successful the
-     *         unique id of the scan
+     * @param engineGroupName name of the engine to get the id of
+     * @return Optional containing the id of the engine group if found;
+     *         otherwise, Optional.empty()
      */
-    ScanResult runScanByConfigId(String authToken, String configId);
+    Optional<String> getEngineGroupIdFromName(String authToken, String engineGroupName);
 
     /**
      * starts a new scan using configuration matching configName
