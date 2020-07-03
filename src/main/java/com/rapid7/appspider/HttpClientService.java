@@ -88,7 +88,7 @@ public class HttpClientService implements ClientService {
         ensureArgumentsValid(endpoint, authToken);
 
         HttpGet request = new HttpGet(endpoint);
-        request.addHeader(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded");
+        request.addHeader(HttpHeaders.CONTENT_TYPE,  MediaType.APPLICATION_FORM_URLENCODED);
         request.addHeader(HttpHeaders.AUTHORIZATION, "Basic " + authToken);
 
         return Optional.of(request);
@@ -170,7 +170,7 @@ public class HttpClientService implements ClientService {
         ensureArgumentsValid(endpoint, authToken);
 
         HttpPost request = new HttpPost(endpoint);
-        request.addHeader(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded");
+        request.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED);
         request.addHeader(HttpHeaders.AUTHORIZATION, "Basic " + authToken);
 
         try {

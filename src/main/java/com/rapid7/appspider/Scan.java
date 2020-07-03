@@ -49,13 +49,15 @@ public class Scan {
             return false;
         }
         String authToken = maybeAuthToken.get();
-        createScanBeforeRunIfNeeded(authToken);
+        if (!createScanBeforeRunIfNeeded(authToken))
+            return false;
 
         ScanResult runResult = client.runScanByConfigName(authToken, settings.getConfigName());
         if (!runResult.isSuccess()) {
             log.println(String.format("Error: Response from %s came back not successful",  client.getUrl()));
+        } else {
+            log.println(String.format("Scan successfully started.",  client.getUrl()));
         }
-        id = Optional.of(runResult.getScanId());
 
         if (!settings.getGenerateReport()) {
             log.println("Continuing the build without generating the report.");
@@ -84,13 +86,14 @@ public class Scan {
     }
 
     private boolean createScanBeforeRunIfNeeded(String authToken) {
-         if ((Objects.isNull(settings.getConfigName()) || settings.getConfigName().isEmpty()) &&
-             (Objects.isNull(settings.getNewConfigUrl()) || settings.getNewConfigUrl().isEmpty())) {
-             return true; // creation not needed
-         }
+        final String newConfigName = settings.getNewConfigName();
+        final String newConfigUrl = settings.getNewConfigUrl();
+        final boolean isNewConfig = (!(Objects.isNull(newConfigName) || newConfigName.isEmpty()) && !(Objects.isNull(newConfigUrl) || newConfigUrl.isEmpty()));
+        if (!isNewConfig) // local not really needed but is provided to clarify the meaning of these conditions
+            return true; // creation not needed
 
-        log.println("Value of Scan Config Name: " + settings.getConfigName());
-        log.println("Value of Scan Config URL: " + settings.getNewConfigUrl());
+        log.println("Value of Scan Config Name: " + newConfigName);
+        log.println("Value of Scan Config URL: " + newConfigUrl);
         log.println("Value of Scan Config Engine Group name: " + settings.getScanConfigEngineGroupName());
 
         Optional<String> engineGroupId = client.getEngineGroupIdFromName(authToken, settings.getScanConfigEngineGroupName());
@@ -99,14 +102,14 @@ public class Scan {
             return false;
         }
 
-        if  (client.saveConfig(authToken, settings.getNewConfigName(), settings.getNewConfigUrl(), engineGroupId.get())) {
+        if  (client.saveConfig(authToken, newConfigName, newConfigUrl, engineGroupId.get())) {
             settings.setConfigName(settings.getNewConfigName());
-            log.println(String.format("Successfully created the scan config %s", settings.getNewConfigName()));
+            log.println(String.format("Successfully created the scan config %s", newConfigName));
 
             settings.resetNewConfigValues();
             return true;
         } else {
-            log.println(String.format("An error occurred while attempting to save %s.", settings.getNewConfigName()));
+            log.println(String.format("An error occurred while attempting to save %s.", newConfigName));
             return false;
         }
     }

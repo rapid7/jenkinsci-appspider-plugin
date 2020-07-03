@@ -112,18 +112,24 @@ public class ApiSerializer {
     public Optional<JSONObject> findByConfigName(JSONArray configs, String configName) {
         if (Objects.isNull(configs))
             throw new IllegalArgumentException("configs cannot be empty");
-        if (Objects.isNull(configName) || configName.isEmpty())
-            throw new IllegalArgumentException("configName cannot be null or empty");
+        try {
+            if (Objects.isNull(configName) || configName.isEmpty())
+                throw new IllegalArgumentException("configName cannot be null or empty");
 
-        for (Object object : configs) {
-            if (!(object instanceof JSONObject))
-                continue;
-            JSONObject config = (JSONObject)object;
-            if (config.getString("Name").equalsIgnoreCase(configName))
-                return Optional.of(config);
+            for (Object object : configs) {
+                if (!(object instanceof JSONObject))
+                    continue;
+                JSONObject config = (JSONObject) object;
+                if (config.getString("Name").equalsIgnoreCase(configName))
+                    return Optional.of(config);
+            }
+            logger.println("no config with name " + configName + " was found.");
+            return Optional.empty();
+        } catch (JSONException e) {
+            logger.println(e.toString());
+            return Optional.empty();
         }
-        logger.println("no config with name " + configName + " was found.");
-        return Optional.empty();
+
     }
 
     /**
