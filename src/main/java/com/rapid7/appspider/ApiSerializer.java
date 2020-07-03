@@ -7,7 +7,6 @@ package com.rapid7.appspider;
 import com.rapid7.appspider.datatransferobjects.ScanResult;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
-import net.sf.json.JSON;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;

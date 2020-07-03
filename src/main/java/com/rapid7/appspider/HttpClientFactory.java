@@ -1,5 +1,7 @@
 package com.rapid7.appspider;
 
+import org.apache.http.conn.ssl.AllowAllHostnameVerifier;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
@@ -19,19 +21,24 @@ public class HttpClientFactory {
     private final SSLConnectionSocketFactory socketFactory;
     final SSLContext sslContext;
 
-    public HttpClientFactory() {
+    public HttpClientFactory(boolean allowSelfSignedCertificates) {
         try {
             // ignore self-signed certs since we have no control over the server setup and as such can't
             // enforce proper certificate usage
-            sslContext = new SSLContextBuilder()
-                    .loadTrustMaterial(null, (x509CertChain, authType) -> true)
-                    .build();
+            if (allowSelfSignedCertificates) {
+                sslContext = new SSLContextBuilder()
+                        .loadTrustMaterial(null, (x509CertChain, authType) -> true)
+                        .build();
+            } else {
+                sslContext = SSLContexts.createDefault();
+            }
+
         } catch (NoSuchAlgorithmException | KeyStoreException | KeyManagementException e) {
             throw new RuntimeException("Unable to configure SSL Context", e);
         }
-        socketFactory = new SSLConnectionSocketFactory(SSLContexts.createDefault(),
+        socketFactory = new SSLConnectionSocketFactory(sslContext,
                 new String[] { "TLSv1.2" },
-                null, SSLConnectionSocketFactory.getDefaultHostnameVerifier());
+                null,  NoopHostnameVerifier.INSTANCE);
     }
 
     /**

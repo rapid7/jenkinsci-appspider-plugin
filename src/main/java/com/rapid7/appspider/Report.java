@@ -21,11 +21,11 @@ public class Report {
 
     private static final int BUFFER_SIZE = 4096;
 
-    private final EnterpriseClient client;
+    private final StandardEnterpriseClient client;
     private final ScanSettings settings;
     private final LoggerFacade log;
 
-    public Report(EnterpriseClient client, ScanSettings settings, LoggerFacade log) {
+    public Report(StandardEnterpriseClient client, ScanSettings settings, LoggerFacade log) {
 
         if (Objects.isNull(client))
             throw new IllegalArgumentException("client cannot be null");
@@ -47,7 +47,7 @@ public class Report {
         // FilePath.toString() is deprecated with no alternative provided
         String reportFolder = Paths.get("" + directory.getParent(), directory.getBaseName()).toString();
 
-        log.println("Generating xml report to:" + directory);
+        log.println("Generating xml report and downloading report zip file to:" + directory);
         Optional<String> maybeAuthToken = client.login(username, password);
         if (!maybeAuthToken.isPresent()) {
             log.println("Unauthorized: unable to retrieve vulnerabilities summary and report.zip");

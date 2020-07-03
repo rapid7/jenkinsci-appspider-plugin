@@ -1,8 +1,8 @@
-package com.rapid7;
+package com.rapid7.jenkinspider;
 
 import com.rapid7.appspider.LoggerFacade;
 
-public class ConsoleLoggerFacade implements LoggerFacade {
+class ConsoleLoggerFacade implements LoggerFacade {
 
     @Override
     public void println(String message) {

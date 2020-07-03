@@ -9,6 +9,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
+import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
@@ -72,10 +73,10 @@ public class ContentHelper {
      * @return StringEntity containing the string value of jsonObject
      * @throws UnsupportedEncodingException thrown by StringEntity
      */
-    public StringEntity entityFrom(JSONObject jsonObject) throws UnsupportedEncodingException {
+    public StringEntity entityFrom(JSONObject jsonObject) {
         if (Objects.isNull(jsonObject))
             throw new IllegalArgumentException("jsonObject cannot be null");
-        return new StringEntity(jsonObject.toString());
+        return new StringEntity(jsonObject.toString(), ContentType.APPLICATION_JSON);
     }
 
     /**

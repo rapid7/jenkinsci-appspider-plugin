@@ -4,10 +4,7 @@
 
 package com.rapid7.appspider;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
-import org.apache.http.NameValuePair;
+import org.apache.http.*;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
@@ -16,6 +13,7 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.utils.URIBuilder;
 import org.json.JSONObject;
 
+import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
@@ -24,11 +22,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class HttpClientService implements ClientService {
-
-    private static final String AUTHORIZATION_HEADER = "Authorization";
-    private static final String ACCEPT_HEADER = "Accept";
-    private static final String CONTENT_TYPE_HEADER = "Context-Type";
-    private static final String APPLICATION_JSON = "application/json";
 
     private final HttpClient httpClient;
     private final LoggerFacade logger;
@@ -95,8 +88,8 @@ public class HttpClientService implements ClientService {
         ensureArgumentsValid(endpoint, authToken);
 
         HttpGet request = new HttpGet(endpoint);
-        request.addHeader(CONTENT_TYPE_HEADER, "application/x-www-form-urlencoded");
-        request.addHeader(AUTHORIZATION_HEADER, "Basic " + authToken);
+        request.addHeader(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded");
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Basic " + authToken);
 
         return Optional.of(request);
     }
@@ -141,9 +134,9 @@ public class HttpClientService implements ClientService {
         ensureArgumentsValid(endpoint, authToken);
 
         HttpGet request = new HttpGet(endpoint);
-        request.addHeader(CONTENT_TYPE_HEADER, APPLICATION_JSON); // not strictly required but also no harm
-        request.addHeader(ACCEPT_HEADER, APPLICATION_JSON);
-        request.addHeader(AUTHORIZATION_HEADER, "Basic " + authToken);
+        request.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON); // not strictly required but also no harm
+        request.addHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON);
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Basic " + authToken);
         return Optional.of(request);
     }
 
@@ -159,7 +152,7 @@ public class HttpClientService implements ClientService {
         ensureArgumentsValid(endpoint, body);
 
         HttpPost request = new HttpPost(endpoint);
-        request.addHeader(CONTENT_TYPE_HEADER, APPLICATION_JSON);
+        request.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
         request.setEntity(body);
         return Optional.of(request);
     }
@@ -177,8 +170,8 @@ public class HttpClientService implements ClientService {
         ensureArgumentsValid(endpoint, authToken);
 
         HttpPost request = new HttpPost(endpoint);
-        request.addHeader(CONTENT_TYPE_HEADER, "application/x-www-form-urlencoded");
-        request.addHeader(AUTHORIZATION_HEADER, "Basic " + authToken);
+        request.addHeader(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded");
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Basic " + authToken);
 
         try {
             request.setEntity(new UrlEncodedFormEntity(Arrays.asList(params)));

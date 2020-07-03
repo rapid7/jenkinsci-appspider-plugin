@@ -1,6 +1,5 @@
 package com.rapid7.jenkinspider;
 
-import com.rapid7.ConsoleLoggerFacade;
 import com.rapid7.appspider.*;
 import hudson.Extension;
 import hudson.FilePath;
@@ -33,10 +32,6 @@ import java.util.function.Function;
  * Created by nbugash on 20/07/15.
  */
 public class PostBuildScan extends Notifier {
-
-    private static final String SUCCESSFUL_SCAN = "Completed|Stopped";
-    private static final String UNSUCCESSFUL_SCAN = "ReportError";
-    private static final String FAILED_SCAN = "Failed";
 
     private String configName;  // Not set to final since it may change
                                 // if user decided to create a new scan config
@@ -99,7 +94,7 @@ public class PostBuildScan extends Notifier {
      * @return boolean representing success or failure of the action to perform
      */
     @Override
-    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
+    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) {
 
         LoggerFacade log = new PrintStreamLoggerFacade(listener.getLogger());
 
@@ -118,10 +113,13 @@ public class PostBuildScan extends Notifier {
         String appSpiderPassword = getDescriptor().getAppSpiderPassword();
         log.println("Value of Scan Configuration name: " + configName);
 
+        boolean allowSelfSignedCertificate = getDescriptor().getAppSpiderAllowSelfSignedCertificate();
+        log.println("Value of Allow Self-Signed certificate : " + allowSelfSignedCertificate);
+
         try {
             ContentHelper contentHelper = new ContentHelper(log);
-            EnterpriseClient client = new EnterpriseClient(
-                    new HttpClientService(new HttpClientFactory().getClient(), contentHelper, log),
+            StandardEnterpriseClient client = new StandardEnterpriseClient(
+                    new HttpClientService(new HttpClientFactory(allowSelfSignedCertificate).getClient(), contentHelper, log),
                     appSpiderEntUrl,
                     new ApiSerializer(log),
                     contentHelper,
@@ -175,9 +173,10 @@ public class PostBuildScan extends Notifier {
     public static final class DescriptorImp extends BuildStepDescriptor<Publisher> {
 
         private String appSpiderEntUrl;
-        private String appSpiderApiKey;
+        private String appSpiderApiKey; // legacy setting, if removed there's a warning in jenkisn about it
         private String appSpiderUsername;
         private String appSpiderPassword;
+        private boolean appSpiderAllowSelfSignedCertificate;
         private String[] scanConfigNames;
         private String[] scanConfigEngines;
 
@@ -215,27 +214,41 @@ public class PostBuildScan extends Notifier {
         }
 
         /**
-         * @return String
+         * @return Display Name of the plugin
          */
         @Override
         public String getDisplayName() {
             return "Scan build using AppSpider";
         }
 
-        public String getAppSpiderEntUrl() { return appSpiderEntUrl; }
+        public String getAppSpiderEntUrl() {
+            return appSpiderEntUrl;
+        }
 
-        public String getAppSpiderUsername() { return appSpiderUsername; }
+        public String getAppSpiderUsername() {
+            return appSpiderUsername;
+        }
 
-        public String getAppSpiderPassword() { return appSpiderPassword; }
+        public String getAppSpiderPassword() {
+            return appSpiderPassword;
+        }
 
-        public String[] getScanConfigNames() { return scanConfigNames.clone(); }
+        public boolean getAppSpiderAllowSelfSignedCertificate() {
+            return appSpiderAllowSelfSignedCertificate;
+        }
 
-        public String[] getScanConfigEngines() { return scanConfigEngines.clone(); }
+        public String[] getScanConfigNames() {
+            return scanConfigNames.clone();
+        }
 
-        private EnterpriseClient buildEnterpriseClient(CloseableHttpClient httpClient, String endpoint) {
+        public String[] getScanConfigEngines() {
+            return scanConfigEngines.clone();
+        }
+
+        private StandardEnterpriseClient buildEnterpriseClient(CloseableHttpClient httpClient, String endpoint) {
             LoggerFacade logger = new ConsoleLoggerFacade();
             ContentHelper contentHelper = new ContentHelper(logger);
-            return new EnterpriseClient(
+            return new StandardEnterpriseClient(
                     new HttpClientService(httpClient, contentHelper, logger),
                     appSpiderEntUrl,
                     new ApiSerializer(logger),
@@ -248,6 +261,7 @@ public class PostBuildScan extends Notifier {
             this.appSpiderEntUrl = formData.getString("appSpiderEntUrl");
             this.appSpiderUsername = formData.getString("appSpiderUsername");
             this.appSpiderPassword = formData.getString("appSpiderPassword");
+            this.appSpiderAllowSelfSignedCertificate = formData.getBoolean("appSpiderAllowSelfSignedCertificate");
             save();
             return super.configure(req, net.sf.json.JSONObject.fromObject(formData));
         }
@@ -291,8 +305,7 @@ public class PostBuildScan extends Notifier {
         public FormValidation doTestCredentials(@QueryParameter("appSpiderEntUrl") final String appSpiderEntUrl,
                                                 @QueryParameter("appSpiderUsername") final String appSpiderUsername,
                                                 @QueryParameter("appSpiderPassword") final String appSpiderPassword) {
-            return executeRequest(client ->
-            {
+            return executeRequest(client -> {
                 if (client.testAuthentication(appSpiderUsername, appSpiderPassword)) {
                     return FormValidation.error("Invalid username / password combination");
                 } else {
@@ -335,7 +348,7 @@ public class PostBuildScan extends Notifier {
 
         @FunctionalInterface
         interface AuthorizedRequest<T> {
-            public T executeRequest(EnterpriseClient client, String authKey);
+            public T executeRequest(StandardEnterpriseClient client, String authKey);
         }
 
         /**
@@ -348,7 +361,7 @@ public class PostBuildScan extends Notifier {
         }
 
         /**
-         * @return
+         * @return array of Strings representing the engine group names
          */
         private String[] getEngineGroups() {
             return executeRequestWithAuthorization((client, authKey) ->
@@ -356,12 +369,12 @@ public class PostBuildScan extends Notifier {
                 new String[0]);
         }
 
-        private <T> T executeRequest(Function<EnterpriseClient, T> supplier, T errorResult) {
+        private <T> T executeRequest(Function<StandardEnterpriseClient, T> supplier, T errorResult) {
             if (Objects.isNull(supplier))
                 return errorResult;
 
-            try (CloseableHttpClient httpClient = new HttpClientFactory().getClient()) {
-                EnterpriseClient client = buildEnterpriseClient(httpClient, appSpiderEntUrl);
+            try (CloseableHttpClient httpClient = new HttpClientFactory(appSpiderAllowSelfSignedCertificate).getClient()) {
+                StandardEnterpriseClient client = buildEnterpriseClient(httpClient, appSpiderEntUrl);
                 return supplier.apply(client);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -373,8 +386,8 @@ public class PostBuildScan extends Notifier {
             if (Objects.isNull(request))
                 return errorResult;
 
-            try (CloseableHttpClient httpClient = new HttpClientFactory().getClient()) {
-                EnterpriseClient client = buildEnterpriseClient(httpClient, appSpiderEntUrl);
+            try (CloseableHttpClient httpClient = new HttpClientFactory(appSpiderAllowSelfSignedCertificate).getClient()) {
+                StandardEnterpriseClient client = buildEnterpriseClient(httpClient, appSpiderEntUrl);
                 Optional<String> maybeAuthKey = client.login(appSpiderUsername, appSpiderPassword);
                 if (!maybeAuthKey.isPresent()) {
                     FormValidation.error("Unauthorized");
