@@ -1,65 +1,48 @@
 package com.rapid7.jenkinspider;
 
+import com.rapid7.appspider.*;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
-import hudson.model.Descriptor;
+import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
+import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
-import org.apache.commons.validator.UrlValidator;
-import org.json.JSONObject;
+import org.apache.commons.validator.routines.UrlValidator;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
-
-import javax.servlet.ServletException;
-
-import java.io.BufferedInputStream;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintStream;
-
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.Arrays;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
-
-import com.rapid7.appspider.*;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Created by nbugash on 20/07/15.
  */
-public class PostBuildScan extends Publisher {
+public class PostBuildScan extends Notifier {
 
-    private static final String SUCCESSFUL_SCAN = "Completed|Stopped";
-    private static final String UNSUCCESSFUL_SCAN = "ReportError";
-    private static final String FAILED_SCAN = "Failed";
-
-    private String configName;  // Not set to final since it may change
+    private final String configName;  // Not set to final since it may change
                                 // if user decided to create a new scan config
 
     private final String reportName;
-    private final Boolean enableScan;
-    private final Boolean generateReport;
+    private final boolean enableScan;
+    private final boolean generateReport;
 
-    private String scanConfigName;
-    private String scanConfigUrl;
-    private String scanConfigEngineGroupName;
+    private final String scanConfigName;
+    private final String scanConfigUrl;
+    private final String scanConfigEngineGroupName;
 
     @DataBoundConstructor
     public PostBuildScan(String configName, String reportName,
@@ -111,9 +94,9 @@ public class PostBuildScan extends Publisher {
      * @return boolean representing success or failure of the action to perform
      */
     @Override
-    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
+    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
 
-        PrintStream log = listener.getLogger();
+        LoggerFacade log = new PrintStreamLoggerFacade(listener.getLogger());
 
         // Don't perform a scan
         if (!enableScan) {
@@ -130,172 +113,41 @@ public class PostBuildScan extends Publisher {
         String appSpiderPassword = getDescriptor().getAppSpiderPassword();
         log.println("Value of Scan Configuration name: " + configName);
 
-        String appSpiderEntApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
-        log.println("Value of Scan Filename: " + reportName);
+        boolean allowSelfSignedCertificate = getDescriptor().getAppSpiderAllowSelfSignedCertificate();
+        log.println("Value of Allow Self-Signed certificate : " + allowSelfSignedCertificate);
 
-        if (isANewScanConfig()) {
-            log.println("Value of Scan Config Name: " + scanConfigName);
-            log.println("Value of Scan Config URL: " + scanConfigUrl);
-            log.println("Value of Scan Config Engine Group name: " + scanConfigEngineGroupName);
-
-            /* Need to indicate to the user that we are going to overwrite the existing scan config */
-
-            /* Create a new scan config */
-            String engineGroupId = ScanEngineGroup.getEngineGroupIdFromName(appSpiderEntUrl, appSpiderEntApiKey, scanConfigEngineGroupName);
-            ScanConfiguration.saveConfig(appSpiderEntUrl, appSpiderEntApiKey, scanConfigName, scanConfigUrl, engineGroupId);
-            log.println("Successfully created the scan config " + scanConfigName);
-
-            // Set the configName to the new created scan config
-            configName = scanConfigName;
-            log.println("New value of Scan Configuration name: " + configName);
-
-            /* Reset scanConfigName and scanConfigUrl */
-            scanConfigName = null;
-            scanConfigUrl = null;
-        }
-
-        /*
-        * (1) Execute the scan
-        * (2) Obtain the response from the NTOEnterprise Server
-        * */
-        JSONObject scanResponse = ScanManagement.runScanByConfigName(appSpiderEntUrl, appSpiderEntApiKey, configName);
-
-        /*
-        * Check if a malformed response was received from the server
-        * */
-        if (Objects.isNull((scanResponse))) {
-            log.println("Error: Check the JSON response from the NTOEnterprise Server");
-            return false;
-        }
-
-        /*
-        * Response received. Check if the request was successful.
-        * */
-        if (!scanResponse.getBoolean("IsSuccess")) {
-            log.println("Error: Response from " + appSpiderEntUrl + " came back not successful");
-            return false;
-        }
-
-        /*
-        * If user opted out from the monitoring the scan, continue with the build process
-        * */
-        if (!generateReport) {
-            log.println("Continuing the build without generating the report.");
-            return true;
-        }
-
-        /* In a regular interval perform a check if the scan is done */
-        String scanId = scanResponse.getJSONObject("Scan").getString("Id");
-        String scan_status = ScanManagement.getScanStatus(appSpiderEntUrl,appSpiderEntApiKey,scanId);
-        String FINISHED_SCANNING = SUCCESSFUL_SCAN + "|" + UNSUCCESSFUL_SCAN + "|" + FAILED_SCAN;
-        while(!scan_status.matches(FINISHED_SCANNING)) {
-            log.println("Waiting for scan to finish");
-            try {
-                //seconds
-                int SLEEPTIME = 90;
-                TimeUnit.SECONDS.sleep(SLEEPTIME);
-                appSpiderEntApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
-                scan_status = ScanManagement.getScanStatus(appSpiderEntUrl, appSpiderEntApiKey, scanId);
-                log.println("Scan status: [" + scan_status +"]");
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-        /* Scan finished */
-        if (!ScanManagement.hasReport(appSpiderEntUrl, appSpiderEntApiKey, scanId).orElse(false)) {
-            log.println("No reports for this scan: " + scanId);
-        }
-
-        log.println("Finished scanning!");
-
-        if (!(ScanManagement.getScanStatus(appSpiderEntUrl, appSpiderEntApiKey, scanId))
-                .matches(SUCCESSFUL_SCAN)) {
-            log.println("Scan was complete but was not successful. Status was '" + ScanManagement.getScanStatus(appSpiderEntUrl, appSpiderEntApiKey, scanId) + "'");
-            return true;
-        }
-
-        /* Scan completed with either a 'Complete' or 'Stopped' status */
-        FilePath filePath = build.getWorkspace();
-        if (filePath == null) {
-            log.println("workspace not found, unable to save results");
-            return false;
-        }
-        log.println("Generating xml report to:" + filePath.getBaseName());
-        String xmlFile = ReportManagement.getVulnerabilitiesSummaryXml(appSpiderEntUrl, appSpiderEntApiKey, scanId);
-
-        /* Saving the Report*/
-        String filenameWithoutExtension = filePath.getParent() + "/" + filePath.getBaseName() + "/" + reportName + "_" + new SimpleDateFormat("yyyy.MM.dd_HH.mm.ss").format(new Date());
-        SaveToFile(filenameWithoutExtension + ".xml", xmlFile, log);
-        log.println("Generating XML report done.");
-
-        log.println("Downloading report ZIP containing HTML formatted results");
-        InputStream zipInputStream = ReportManagement.getReportZip(appSpiderEntUrl, appSpiderEntApiKey, scanId);
-        SaveToFile(filenameWithoutExtension + ".zip", zipInputStream, log);
-
-        return true;
-    }
-
-    /**
-     *
-     * @param filename name of the file to save to
-     * @param data data to save
-     * @param log used to log error in the event that the filename could not be created
-     */
-    private void SaveToFile(String filename, String data, PrintStream log) {
-        File file = new File(filename);
         try {
-            if (!file.exists() && !file.createNewFile()) {
-                log.println("Unable to create file " + filename);
-                return;
+            ContentHelper contentHelper = new ContentHelper(log);
+            StandardEnterpriseClient client = new StandardEnterpriseClient(
+                    new HttpClientService(new HttpClientFactory(allowSelfSignedCertificate).getClient(), contentHelper, log),
+                    appSpiderEntUrl,
+                    new ApiSerializer(log),
+                    contentHelper,
+                    log);
+            ScanSettings settings = new ScanSettings(configName, reportName, true, generateReport, scanConfigName, scanConfigUrl, scanConfigEngineGroupName);
+
+            Scan scan = new Scan(client, settings, log);
+            if (!scan.process(appSpiderUsername, appSpiderPassword))
+                return false;
+
+            FilePath filePath = build.getWorkspace();
+            if (Objects.isNull(filePath)) {
+                log.println("workspace not found, unable to save results");
+                return false;
             }
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file.getAbsolutePath()), StandardCharsets.UTF_8));
-            bw.write(data);
-            bw.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-    /**
-     *
-     * @param filename
-     * @param inputStream
-     * @param log
-     */
-    private void SaveToFile(String filename, InputStream inputStream, PrintStream log) {
-        if (inputStream == null) {
-            throw new RuntimeException("unexpected invalid input stream encountered while saving file");
-        }
-
-        File file = new File(filename);
-
-        try (InputStream bufferedInputStream = new BufferedInputStream(inputStream);
-             FileOutputStream outputStream = new FileOutputStream(file))
-        {
-            if (!file.exists() && !file.createNewFile()) {
-                log.println("Unable to create file " + filename);
-                return;
+            String scanId = scan.getId().orElse("");
+            if (scanId.isEmpty()) {
+                log.println("Unexepcted error, scan identifier not found, unable to save retrieve report");
+                return false;
             }
 
-            byte[] data = new byte[4096];
-            int count = 0;
-            while ((count = bufferedInputStream.read(data)) != -1) {
-                outputStream.write(data, 0, count);
-            }
-            outputStream.flush();
+            return new Report(client, settings, log)
+                .saveReport(appSpiderUsername, appSpiderPassword, scanId, filePath);
 
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IllegalArgumentException e) {
+            log.println(e.toString());
+            return false;
         }
-    }
-
-    private boolean isANewScanConfig() {
-        return (!(scanConfigName == null || scanConfigName.isEmpty()) &&
-                !(scanConfigUrl  == null || scanConfigUrl.isEmpty()));
     }
 
     // Overridden for better type safety.
@@ -316,12 +168,14 @@ public class PostBuildScan extends Publisher {
      * for the actual HTML fragment for the configuration screen.
      */
     @Extension
-    public static final class DescriptorImp extends Descriptor<Publisher> {
+    public static final class DescriptorImp extends BuildStepDescriptor<Publisher> {
 
         private String appSpiderEntUrl;
+        @SuppressWarnings("legacy setting, if removed there's a warning in jenkisn about it")
         private String appSpiderApiKey;
         private String appSpiderUsername;
         private String appSpiderPassword;
+        private boolean appSpiderAllowSelfSignedCertificate;
         private String[] scanConfigNames;
         private String[] scanConfigEngines;
 
@@ -340,8 +194,7 @@ public class PostBuildScan extends Publisher {
          * prevent the form from being saved. It just means that a message
          * will be displayed to the user.
          */
-        public FormValidation doCheckappSpiderEntUrl(@QueryParameter String value)
-                throws IOException, ServletException {
+        public FormValidation doCheckappSpiderEntUrl(@QueryParameter String value) {
             if (value.length() == 0)
                 return FormValidation.error("Please set a value");
             if (value.length() < 4)
@@ -359,29 +212,54 @@ public class PostBuildScan extends Publisher {
         }
 
         /**
-         * @return String
+         * @return Display Name of the plugin
          */
         @Override
         public String getDisplayName() {
             return "Scan build using AppSpider";
         }
 
-        public String getAppSpiderEntUrl() { return appSpiderEntUrl; }
+        public String getAppSpiderEntUrl() {
+            return appSpiderEntUrl;
+        }
 
-        public String getAppSpiderUsername() { return appSpiderUsername; }
+        public String getAppSpiderUsername() {
+            return appSpiderUsername;
+        }
 
-        public String getAppSpiderPassword() { return appSpiderPassword; }
+        public String getAppSpiderPassword() {
+            return appSpiderPassword;
+        }
 
-        public String[] getScanConfigNames() { return scanConfigNames.clone(); }
+        public boolean getAppSpiderAllowSelfSignedCertificate() {
+            return appSpiderAllowSelfSignedCertificate;
+        }
 
-        public String[] getScanConfigEngines() { return scanConfigEngines.clone(); }
+        public String[] getScanConfigNames() {
+            return scanConfigNames.clone();
+        }
 
+        public String[] getScanConfigEngines() {
+            return scanConfigEngines.clone();
+        }
+
+        private StandardEnterpriseClient buildEnterpriseClient(CloseableHttpClient httpClient, String endpoint) {
+            LoggerFacade logger = new ConsoleLoggerFacade();
+            ContentHelper contentHelper = new ContentHelper(logger);
+            return new StandardEnterpriseClient(
+                    new HttpClientService(httpClient, contentHelper, logger),
+                    endpoint,
+                    new ApiSerializer(logger),
+                    contentHelper,
+                    logger);
+        }
 
         @Override
         public boolean configure(StaplerRequest req, net.sf.json.JSONObject formData) throws FormException {
             this.appSpiderEntUrl = formData.getString("appSpiderEntUrl");
             this.appSpiderUsername = formData.getString("appSpiderUsername");
             this.appSpiderPassword = formData.getString("appSpiderPassword");
+            this.appSpiderAllowSelfSignedCertificate = formData.getBoolean("appSpiderAllowSelfSignedCertificate");
             save();
             return super.configure(req, net.sf.json.JSONObject.fromObject(formData));
         }
@@ -395,9 +273,7 @@ public class PostBuildScan extends Publisher {
             scanConfigNames = getConfigNames();
             ListBoxModel items = new ListBoxModel();
             items.add("[Select a scan config name]"); // Adding a default "Pick a scan configuration" entry
-            for (int i = 0; i < scanConfigNames.length; i++) {
-                items.add(scanConfigNames[i]);
-            }
+            items.addAll(Arrays.stream(scanConfigEngines).map(ListBoxModel.Option::new).collect(Collectors.toList()));
             return items;
         }
 
@@ -410,9 +286,7 @@ public class PostBuildScan extends Publisher {
             scanConfigEngines = getEngineGroups();
             ListBoxModel items = new ListBoxModel();
             items.add("[Select an engine group name]"); // Adding a default "Pick a engine group name" entry
-            for (int i = 0; i < scanConfigEngines.length; i++ ) {
-                items.add(scanConfigEngines[i]);
-            }
+            items.addAll(Arrays.stream(scanConfigEngines).map(ListBoxModel.Option::new).collect(Collectors.toList()));
             return items;
         }
 
@@ -425,17 +299,13 @@ public class PostBuildScan extends Publisher {
         public FormValidation doTestCredentials(@QueryParameter("appSpiderEntUrl") final String appSpiderEntUrl,
                                                 @QueryParameter("appSpiderUsername") final String appSpiderUsername,
                                                 @QueryParameter("appSpiderPassword") final String appSpiderPassword) {
-            try {
-                String authToken = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
-                if (Objects.isNull((authToken))) {
+            return executeRequest(appSpiderEntUrl, client -> {
+                if (client.testAuthentication(appSpiderUsername, appSpiderPassword)) {
                     return FormValidation.error("Invalid username / password combination");
                 } else {
                     return FormValidation.ok("Connected Successfully.");
                 }
-            } catch (NullPointerException e) {
-                return FormValidation.error("Invalid username / password combination");
-            }
-
+            }, FormValidation.error("Invalid username / password combination"));
         }
 
 
@@ -450,7 +320,7 @@ public class PostBuildScan extends Publisher {
                             "Only alpha-numeric, '.' , '_' , and '-' are allowed");
                 }
 
-                if (new UrlValidator().isValid(scanConfigUrl)) {
+                if (UrlValidator.getInstance().isValid(scanConfigUrl)) {
                     URL url = new URL(scanConfigUrl);
                     URLConnection conn = url.openConnection();
                     conn.connect();
@@ -458,33 +328,67 @@ public class PostBuildScan extends Publisher {
                     return FormValidation.error("Invalid url. Check the protocol (i.e http/https) or the port.");
                 }
                 return FormValidation.ok("Valid scan configuration name and url.");
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-                return FormValidation.error("Unable to connect to \"" + scanConfigUrl +"\". Try again in a few mins or " +
-                        "try another url");
-            } catch (IOException e) {
+            } catch (IOException /* | MalformedURLException */ e) {
                 e.printStackTrace();
                 return FormValidation.error("Unable to connect to \"" + scanConfigUrl +"\". Try again in a few mins or " +
                         "try another url");
             }
         }
 
+
+        @FunctionalInterface
+        interface AuthorizedRequest<T> {
+            public T executeRequest(EnterpriseClient client, String authKey);
+        }
+
         /**
-         * @return
+         * @return array of scan config names returned from AppSpider Enterprise
          */
         private String[] getConfigNames() {
-            this.appSpiderApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
-            return ScanConfiguration.getConfigNames(appSpiderEntUrl, appSpiderApiKey);
+            return executeRequestWithAuthorization((client, authKey) ->
+                client.getConfigNames(authKey).orElse(new String[0]),
+                new String[0]);
         }
 
         /**
-         * @return
+         * @return array of Strings representing the engine group names
          */
         private String[] getEngineGroups() {
-            this.appSpiderApiKey = Authentication.authenticate(appSpiderEntUrl, appSpiderUsername, appSpiderPassword);
-            return ScanEngineGroup.getEngineNamesGroupsForClient(appSpiderEntUrl, appSpiderApiKey);
+            return executeRequestWithAuthorization((client, authKey) ->
+                client.getEngineNamesGroupForClient(authKey).orElse(new String[0]),
+                new String[0]);
         }
 
+        private <T> T executeRequest(String endpoint,  Function<EnterpriseClient, T> supplier, T errorResult) {
+            if (Objects.isNull(supplier))
+                return errorResult;
+
+            try (CloseableHttpClient httpClient = new HttpClientFactory(appSpiderAllowSelfSignedCertificate).getClient()) {
+                EnterpriseClient client = buildEnterpriseClient(httpClient, endpoint);
+                return supplier.apply(client);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return errorResult;
+            }
+        }
+
+        private <T> T executeRequestWithAuthorization(AuthorizedRequest<T> request, T errorResult) {
+            if (Objects.isNull(request))
+                return errorResult;
+
+            try (CloseableHttpClient httpClient = new HttpClientFactory(appSpiderAllowSelfSignedCertificate).getClient()) {
+                EnterpriseClient client = buildEnterpriseClient(httpClient, appSpiderEntUrl);
+                Optional<String> maybeAuthKey = client.login(appSpiderUsername, appSpiderPassword);
+                if (!maybeAuthKey.isPresent()) {
+                    FormValidation.error("Unauthorized");
+                    return errorResult;
+                }
+                return request.executeRequest(client, maybeAuthKey.get());
+            } catch (IOException e) {
+                e.printStackTrace();
+                return errorResult;
+            }
+        }
     }
 
 }

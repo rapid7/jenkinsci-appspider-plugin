@@ -7,6 +7,9 @@
   <f:entry field="appSpiderEntUrl" title="AppSpider Rest Url">
     <f:textbox />
   </f:entry>
+  <f:entry field="appSpiderAllowSelfSignedCertificate" title="Allow Self-Signed Certificates">
+    <f:checkbox />
+  </f:entry>
   <f:section title="AppSpider Credentials">
     <f:entry field="appSpiderUsername" title="Username">
       <f:textbox />

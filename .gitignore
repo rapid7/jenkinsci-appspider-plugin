@@ -67,9 +67,6 @@ crashlytics-build.properties
 /work/
 /temp/
 
-# Ignoring test
-/src/test/
-
 # Eclipse
 .settings/
 .project
