@@ -270,12 +270,7 @@ public class PostBuildScan extends Notifier {
          */
         public ListBoxModel doFillConfigNameItems() {
             scanConfigNames = getConfigNames();
-            ListBoxModel items = new ListBoxModel();
-            items.add("[Select a scan config name]"); // Adding a default "Pick a scan configuration" entry
-            if (!Objects.isNull(scanConfigNames)) {
-                items.addAll(Arrays.stream(scanConfigNames).map(ListBoxModel.Option::new).collect(Collectors.toList()));
-            }
-            return items;
+            return buildListBoxModel("[Select a scan config name]", scanConfigNames);
         }
 
         /**
@@ -285,13 +280,16 @@ public class PostBuildScan extends Notifier {
          */
         public ListBoxModel doFillScanConfigEngineGroupNameItems() {
             scanConfigEngines = getEngineGroups();
-            ListBoxModel items = new ListBoxModel();
-            items.add("[Select an engine group name]"); // Adding a default "Pick a engine group name" entry
-            if (!Objects.isNull(scanConfigEngines)) {
-                items.addAll(Arrays.stream(scanConfigEngines).map(ListBoxModel.Option::new).collect(Collectors.toList()));
-            }
-            return items;
+            return buildListBoxModel("[Select an engine group name]", scanConfigEngines);
         }
+
+        private static ListBoxModel buildListBoxModel(String introduction, String[] items) {
+            ListBoxModel model = new ListBoxModel();
+            model.add(introduction); // Adding a default "Pick a scan configuration" entry
+            model.addAll(Arrays.stream(items).map(ListBoxModel.Option::new).collect(Collectors.toList()));
+            return model;
+        }
+
 
         /**
          * @param appSpiderEntUrl
@@ -305,7 +303,7 @@ public class PostBuildScan extends Notifier {
                                                 @QueryParameter("appSpiderPassword") final String appSpiderPassword) {
             return executeRequest(appSpiderEntUrl, appSpiderAllowSelfSignedCertificate, client -> {
                 if (!client.testAuthentication(appSpiderUsername, appSpiderPassword)) {
-                    return FormValidation.error("Invalid username / password combination " + appSpiderEntUrl + " " +  appSpiderUsername + " " + appSpiderPassword);
+                    return FormValidation.error("Invalid username / password combination");
                 } else {
                     return FormValidation.ok("Connected Successfully.");
                 }
