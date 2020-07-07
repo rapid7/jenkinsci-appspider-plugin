@@ -122,7 +122,7 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
      *         otherwise, Optional.empty()
      */
     @Override
-    public Optional<String[]> getEngineNamesGroupForClient(String authToken) {
+    public Optional<String[]> getEngineGroupNamesForClient(String authToken) {
         return getEngineGroupsForClient(authToken)
                 .map(map -> new ArrayList<>(map.keySet()))
                 .map(Utility::toStringArray);
@@ -137,20 +137,20 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
      */
     @Override
     public Optional<String> getEngineGroupIdFromName(String authToken, String engineGroupName) {
-        return getAllEngineGroups(authToken).flatMap(map -> Optional.of(map.get(engineGroupName)));
+        return getAllEngineGroups(authToken).filter(map -> map.containsKey(engineGroupName)).flatMap(map -> Optional.of(map.get(engineGroupName)));
     }
 
     private static final String GET_ALL_ENGINE_GROUPS = "/EngineGroup/GetAllEngineGroups";
     private static final String GET_ENGINE_GROUPS_FOR_CLIENT = "/EngineGroup/GetEngineGroupsForClient";
     private Optional<Map<String, String>> getAllEngineGroups(String authToken) {
         return clientService
-                .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_ALL_ENGINE_GROUPS, authToken)
-                .flatMap(get -> contentHelper.asIdToNameMapOfStringToString(clientService.executeJsonRequest(get)));
+            .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_ALL_ENGINE_GROUPS, authToken)
+            .flatMap(get -> contentHelper.asMapOfStringToString("Name", "Id", clientService.executeJsonRequest(get)));
     }
     private Optional<Map<String,String>> getEngineGroupsForClient(String authToken) {
         return clientService
-                .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_ENGINE_GROUPS_FOR_CLIENT, authToken)
-                .flatMap(get -> contentHelper.asIdToNameMapOfStringToString(clientService.executeJsonRequest(get)));
+            .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_ENGINE_GROUPS_FOR_CLIENT, authToken)
+            .flatMap(get -> contentHelper.asMapOfStringToString("Name", "Id", clientService.executeJsonRequest(get)));
     }
     // </editor-fold>
 
@@ -222,21 +222,21 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
      */
     private ScanResult runScanByConfigId(String authToken, String configId) {
         return clientService
-                .buildPostRequestUsingFormUrlEncoding(
-                        restEndPointUrl + RUN_SCAN,
-                        authToken,
-                        new BasicNameValuePair("configId", configId))
-                .flatMap(clientService::executeJsonRequest)
-                .map(apiSerializer::getScanResult)
-                .orElse(new ScanResult(false, ""));
+            .buildPostRequestUsingFormUrlEncoding(
+                restEndPointUrl + RUN_SCAN,
+                authToken,
+                new BasicNameValuePair("configId", configId))
+            .flatMap(clientService::executeJsonRequest)
+            .map(apiSerializer::getScanResult)
+            .orElse(new ScanResult(false, ""));
     }
 
     private boolean resultAndIsSuccessProvider(String endpoint, String authToken, String scanId) {
         return clientService
-                .buildGetRequestUsingFormUrlEncoding(endpoint, authToken, contentHelper.pairFrom(SCAN_ID, scanId))
-                .flatMap(clientService::executeJsonRequest)
-                .map(apiSerializer::getResultIsSuccess)
-                .orElse(false);
+            .buildGetRequestUsingFormUrlEncoding(endpoint, authToken, contentHelper.pairFrom(SCAN_ID, scanId))
+            .flatMap(clientService::executeJsonRequest)
+            .map(apiSerializer::getResultIsSuccess)
+            .orElse(false);
     }
 
     // </editor-fold>
@@ -252,8 +252,7 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
      * @return Optional containing the JSONObject of the matching configuration on success;
      *         otherwise, Optional.empty()
      */
-    @Override
-    public Optional<JSONObject> getConfigByName(String authToken, String configName) {
+    private Optional<JSONObject> getConfigByName(String authToken, String configName) {
         return getConfigs(authToken)
             .flatMap(configs -> apiSerializer.findByConfigName(configs, configName));
     }
@@ -263,8 +262,7 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
      * @param authToken authorization token required to execute request
      * @return Optional containing JSONArray on success; otherwise Optional.empty()
      */
-    @Override
-    public Optional<JSONArray> getConfigs(String authToken) {
+    private Optional<JSONArray> getConfigs(String authToken) {
         return clientService
             .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_CONFIGS, authToken)
             .flatMap(clientService::executeJsonRequest)
@@ -296,26 +294,26 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
 
         try {
             Template template = new Configuration().getTemplate(
-                    "src/main/java/com/rapid7/appspider/template/scanConfigTemplate.ftl");
+            "src/main/java/com/rapid7/appspider/template/scanConfigTemplate.ftl");
 
             String scanConfigXml = apiSerializer.getScanConfigXml(template, name, url);
             return clientService
-                    .buildPostRequestUsingFormUrlEncoding(
-                            restEndPointUrl + SAVE_CONFIG,
-                            authToken,
-                            contentHelper.pairFrom("defendEnabled", "true"),
-                            contentHelper.pairFrom("monitoringDelay", "0"),
-                            contentHelper.pairFrom("monitoringTriggerScan", "true"),
-                            contentHelper.pairFrom("id", "null"),
-                            contentHelper.pairFrom("name",name),
-                            contentHelper.pairFrom("clientId", "null"),
-                            contentHelper.pairFrom("engineGroupId",engineGroupId),
-                            contentHelper.pairFrom("monitoring", "true"),
-                            contentHelper.pairFrom("isApproveRequired", "false"),
-                            contentHelper.pairFrom("scanconfigxml", scanConfigXml))
-                    .flatMap(clientService::executeJsonRequest)
-                    .map(apiSerializer::getIsSuccess)
-                    .orElse(false);
+                .buildPostRequestUsingFormUrlEncoding(
+                    restEndPointUrl + SAVE_CONFIG,
+                    authToken,
+                    contentHelper.pairFrom("defendEnabled", "true"),
+                    contentHelper.pairFrom("monitoringDelay", "0"),
+                    contentHelper.pairFrom("monitoringTriggerScan", "true"),
+                    contentHelper.pairFrom("id", "null"),
+                    contentHelper.pairFrom("name",name),
+                    contentHelper.pairFrom("clientId", "null"),
+                    contentHelper.pairFrom("engineGroupId",engineGroupId),
+                    contentHelper.pairFrom("monitoring", "true"),
+                    contentHelper.pairFrom("isApproveRequired", "false"),
+                    contentHelper.pairFrom("scanconfigxml", scanConfigXml))
+                .flatMap(clientService::executeJsonRequest)
+                .map(apiSerializer::getIsSuccess)
+                .orElse(false);
 
         } catch (IOException | TemplateException e) {
             logger.println(e.toString());

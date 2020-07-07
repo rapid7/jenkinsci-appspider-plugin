@@ -41,7 +41,7 @@ public interface EnterpriseClient {
      *         representing the names of available engine groups;
      *         otherwise, Optional.empty()
      */
-    Optional<String[]> getEngineNamesGroupForClient(String authToken);
+    Optional<String[]> getEngineGroupNamesForClient(String authToken);
 
     /**
      * fetches the unique id of the engine group given by engineGroupName
@@ -84,22 +84,6 @@ public interface EnterpriseClient {
      * @return true if the scan has a report; otherwise, false
      */
     boolean hasReport(String authToken, String scanId);
-
-    /**
-     * calls /Config/GetConfigs endpoint and returns the JSONObject from those results matching configName
-     * @param authToken authorization token required to execute request
-     * @param configName name of the matching configuration to return
-     * @return Optional containing the JSONObject of the matching configuration on success;
-     *         otherwise, Optional.empty()
-     */
-    Optional<JSONObject> getConfigByName(String authToken, String configName);
-
-    /**
-     * calls the /Config/GetConfigs endpoint returning the resulting JSONArray of Configs on success
-     * @param authToken authorization token required to execute request
-     * @return Optional containing JSONArray on success; otherwise Optional.empty()
-     */
-    Optional<JSONArray> getConfigs(String authToken);
 
     /**
      * returns String[] of scan config names

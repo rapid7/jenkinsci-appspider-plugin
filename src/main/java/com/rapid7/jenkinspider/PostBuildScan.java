@@ -119,11 +119,11 @@ public class PostBuildScan extends Notifier {
         try {
             ContentHelper contentHelper = new ContentHelper(log);
             StandardEnterpriseClient client = new StandardEnterpriseClient(
-                    new HttpClientService(new HttpClientFactory(allowSelfSignedCertificate).getClient(), contentHelper, log),
-                    appSpiderEntUrl,
-                    new ApiSerializer(log),
-                    contentHelper,
-                    log);
+                new HttpClientService(new HttpClientFactory(allowSelfSignedCertificate).getClient(), contentHelper, log),
+                appSpiderEntUrl,
+                new ApiSerializer(log),
+                contentHelper,
+                log);
             ScanSettings settings = new ScanSettings(configName, reportName, true, generateReport, scanConfigName, scanConfigUrl, scanConfigEngineGroupName);
 
             Scan scan = new Scan(client, settings, log);
@@ -148,6 +148,7 @@ public class PostBuildScan extends Notifier {
             log.println(e.toString());
             return false;
         }
+
     }
 
     // Overridden for better type safety.
@@ -271,7 +272,9 @@ public class PostBuildScan extends Notifier {
             scanConfigNames = getConfigNames();
             ListBoxModel items = new ListBoxModel();
             items.add("[Select a scan config name]"); // Adding a default "Pick a scan configuration" entry
-            items.addAll(Arrays.stream(scanConfigEngines).map(ListBoxModel.Option::new).collect(Collectors.toList()));
+            if (!Objects.isNull(scanConfigNames)) {
+                items.addAll(Arrays.stream(scanConfigNames).map(ListBoxModel.Option::new).collect(Collectors.toList()));
+            }
             return items;
         }
 
@@ -284,7 +287,9 @@ public class PostBuildScan extends Notifier {
             scanConfigEngines = getEngineGroups();
             ListBoxModel items = new ListBoxModel();
             items.add("[Select an engine group name]"); // Adding a default "Pick a engine group name" entry
-            items.addAll(Arrays.stream(scanConfigEngines).map(ListBoxModel.Option::new).collect(Collectors.toList()));
+            if (!Objects.isNull(scanConfigEngines)) {
+                items.addAll(Arrays.stream(scanConfigEngines).map(ListBoxModel.Option::new).collect(Collectors.toList()));
+            }
             return items;
         }
 
@@ -294,12 +299,13 @@ public class PostBuildScan extends Notifier {
          * @param appSpiderPassword
          * @return FormValidation result of the credentials test
          */
-        public FormValidation doTestCredentials(@QueryParameter("appSpiderEntUrl") final String appSpiderEntUrl,
+        public FormValidation doTestCredentials(@QueryParameter("appSpiderAllowSelfSignedCertificate") final boolean appSpiderAllowSelfSignedCertificate,
+                                                @QueryParameter("appSpiderEntUrl") final String appSpiderEntUrl,
                                                 @QueryParameter("appSpiderUsername") final String appSpiderUsername,
                                                 @QueryParameter("appSpiderPassword") final String appSpiderPassword) {
-            return executeRequest(appSpiderEntUrl, client -> {
-                if (client.testAuthentication(appSpiderUsername, appSpiderPassword)) {
-                    return FormValidation.error("Invalid username / password combination");
+            return executeRequest(appSpiderEntUrl, appSpiderAllowSelfSignedCertificate, client -> {
+                if (!client.testAuthentication(appSpiderUsername, appSpiderPassword)) {
+                    return FormValidation.error("Invalid username / password combination " + appSpiderEntUrl + " " +  appSpiderUsername + " " + appSpiderPassword);
                 } else {
                     return FormValidation.ok("Connected Successfully.");
                 }
@@ -353,11 +359,11 @@ public class PostBuildScan extends Notifier {
          */
         private String[] getEngineGroups() {
             return executeRequestWithAuthorization((client, authKey) ->
-                client.getEngineNamesGroupForClient(authKey).orElse(new String[0]),
+                client.getEngineGroupNamesForClient(authKey).orElse(new String[0]),
                 new String[0]);
         }
 
-        private <T> T executeRequest(String endpoint,  Function<EnterpriseClient, T> supplier, T errorResult) {
+        private <T> T executeRequest(String endpoint, boolean appSpiderAllowSelfSignedCertificate, Function<EnterpriseClient, T> supplier, T errorResult) {
             if (Objects.isNull(supplier))
                 return errorResult;
 

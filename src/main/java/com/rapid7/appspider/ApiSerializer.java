@@ -102,35 +102,6 @@ public class ApiSerializer {
         }
     }
 
-    /**
-     * returns the JSONObject for the item in configs with "Name" matching name if found;
-     * otherwise Optional.empty()
-     * @param configs JSONArray to search through
-     * @param configName name of config to find
-     * @return Optional containing the matching JSONObject on success; otherwise Optional.empty()
-     */
-    public Optional<JSONObject> findByConfigName(JSONArray configs, String configName) {
-        if (Objects.isNull(configs))
-            throw new IllegalArgumentException("configs cannot be empty");
-        try {
-            if (Objects.isNull(configName) || configName.isEmpty())
-                throw new IllegalArgumentException("configName cannot be null or empty");
-
-            for (Object object : configs) {
-                if (!(object instanceof JSONObject))
-                    continue;
-                JSONObject config = (JSONObject) object;
-                if (config.getString("Name").equalsIgnoreCase(configName))
-                    return Optional.of(config);
-            }
-            logger.println("no config with name " + configName + " was found.");
-            return Optional.empty();
-        } catch (JSONException e) {
-            logger.println(e.toString());
-            return Optional.empty();
-        }
-
-    }
 
     /**
      * returns List{String} of all scan config names found in configs
@@ -212,6 +183,35 @@ public class ApiSerializer {
             return Optional.empty();
         }
     }
+    /**
+     * returns the JSONObject for the item in configs with "Name" matching name if found;
+     * otherwise Optional.empty()
+     * @param configs JSONArray to search through
+     * @param configName name of config to find
+     * @return Optional containing the matching JSONObject on success; otherwise Optional.empty()
+     */
+    public Optional<JSONObject> findByConfigName(JSONArray configs, String configName) {
+        if (Objects.isNull(configs))
+            throw new IllegalArgumentException("configs cannot be empty");
+        try {
+            if (Objects.isNull(configName) || configName.isEmpty())
+                throw new IllegalArgumentException("configName cannot be null or empty");
+
+            for (Object object : configs) {
+                if (!(object instanceof JSONObject))
+                    continue;
+                JSONObject config = (JSONObject) object;
+                if (config.getString("Name").equalsIgnoreCase(configName))
+                    return Optional.of(config);
+            }
+            logger.println("no config with name " + configName + " was found.");
+            return Optional.empty();
+        } catch (JSONException e) {
+            logger.println(e.toString());
+            return Optional.empty();
+        }
+
+    }
 
     /**
      * returns true if all given keys in jsonObject are true
@@ -221,10 +221,10 @@ public class ApiSerializer {
      */
     public Optional<Boolean> getBooleansFrom(JSONObject jsonObject, String... keys) {
         return Objects.isNull(jsonObject)
-                ? Optional.empty()
-                : Optional
-                    .of(Arrays.stream(keys)
-                    .allMatch(jsonObject::getBoolean));
+            ? Optional.empty()
+            : Optional
+                .of(Arrays.stream(keys)
+                .allMatch(jsonObject::getBoolean));
     }
 
 }

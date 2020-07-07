@@ -40,8 +40,8 @@ public class HttpClientFactory {
             throw new RuntimeException("Unable to configure SSL Context", e);
         }
         socketFactory = new SSLConnectionSocketFactory(sslContext,
-                new String[] { "TLSv1.2" },
-                null,  NoopHostnameVerifier.INSTANCE);
+                new String[]{"TLSv1.2"},
+                null, NoopHostnameVerifier.INSTANCE);
     }
 
     /**

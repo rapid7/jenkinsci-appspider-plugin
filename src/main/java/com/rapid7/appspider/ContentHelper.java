@@ -19,6 +19,7 @@ import org.json.JSONObject;
 import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -131,22 +132,25 @@ public class ContentHelper {
     }
     /**
      * extracts the key/value pairs from JSONObject and returns them as a Map{String, String}
+     * @param key key in the json object to serve as key in the map
+     * @param value value in the json object to serve as value in the map
      * @param optionalJsonObject Optional{JSONObject} to extract key/value pairs from if present
      * @return on successs a Map{String, String} of key/value pairs from JSONObject;
      *         otherwiwse Optional.empty()
      */
-    public Optional<Map<String, String>> asIdToNameMapOfStringToString(Optional<JSONObject> optionalJsonObject) {
+    public Optional<Map<String, String>> asMapOfStringToString(String key, String value, Optional<JSONObject> optionalJsonObject) {
         return optionalJsonObject.flatMap(json ->
         {
             try {
-                return Optional.of(json.getJSONArray("EngineGroups")
-                    .toList()
-                    .stream()
-                    .filter(obj -> obj instanceof JSONObject)
-                    .map(obj -> (JSONObject) obj)
-                    .collect(Collectors.toMap(
-                        obj -> obj.getString("Id"),
-                        obj -> obj.getString("Name"))));
+                JSONArray array = json.getJSONArray("EngineGroups");
+                Map<String, String> mapOfStringToString = new HashMap<>();
+                if (Objects.isNull(array))
+                    return Optional.empty();
+                for (int i =0; i< array.length(); i++) {
+                    JSONObject jsonObject = array.getJSONObject(i);
+                    mapOfStringToString.put(jsonObject.getString(key), jsonObject.getString(value));
+                }
+                return Optional.of(mapOfStringToString);
             } catch (JSONException e) {
                 logger.println(e.toString());
                 return Optional.empty();
