@@ -6,6 +6,8 @@ package com.rapid7.appspider;
 
 import com.rapid7.appspider.datatransferobjects.ScanResult;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -58,6 +60,7 @@ public class Scan {
         } else {
             log.println(String.format("Scan for '%s' successfully started.",  settings.getConfigName()));
         }
+        id = Optional.of(runResult.getScanId());
 
         if (!settings.getGenerateReport()) {
             log.println("Continuing the build without generating the report.");
@@ -101,7 +104,16 @@ public class Scan {
             return false;
         }
 
-        if  (client.saveConfig(authToken, newConfigName, newConfigUrl, engineGroupId.get())) {
+        URL newScanConfigTarget;
+        try {
+            newScanConfigTarget = new URL(newConfigUrl);
+        } catch (MalformedURLException e) {
+            log.println(String.format("Invalid scan targat '%s', unable to save configuration", newConfigUrl));
+            log.severe(e.getMessage());
+            return false;
+        }
+
+        if  (client.saveConfig(authToken, newConfigName, newScanConfigTarget, engineGroupId.get())) {
             settings.setConfigName(settings.getNewConfigName());
             log.println(String.format("Successfully created the scan config %s", newConfigName));
 

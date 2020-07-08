@@ -5,10 +5,9 @@
 package com.rapid7.appspider;
 
 import com.rapid7.appspider.datatransferobjects.ScanResult;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.io.InputStream;
+import java.net.URL;
 import java.util.Optional;
 
 public interface EnterpriseClient {
@@ -41,7 +40,7 @@ public interface EnterpriseClient {
      *         representing the names of available engine groups;
      *         otherwise, Optional.empty()
      */
-    Optional<String[]> getEngineNamesGroupForClient(String authToken);
+    Optional<String[]> getEngineGroupNamesForClient(String authToken);
 
     /**
      * fetches the unique id of the engine group given by engineGroupName
@@ -86,22 +85,6 @@ public interface EnterpriseClient {
     boolean hasReport(String authToken, String scanId);
 
     /**
-     * calls /Config/GetConfigs endpoint and returns the JSONObject from those results matching configName
-     * @param authToken authorization token required to execute request
-     * @param configName name of the matching configuration to return
-     * @return Optional containing the JSONObject of the matching configuration on success;
-     *         otherwise, Optional.empty()
-     */
-    Optional<JSONObject> getConfigByName(String authToken, String configName);
-
-    /**
-     * calls the /Config/GetConfigs endpoint returning the resulting JSONArray of Configs on success
-     * @param authToken authorization token required to execute request
-     * @return Optional containing JSONArray on success; otherwise Optional.empty()
-     */
-    Optional<JSONArray> getConfigs(String authToken);
-
-    /**
      * returns String[] of scan config names
      * @param authToken authorization token required to execute request
      * @return String[] of all scan config names
@@ -116,7 +99,7 @@ public interface EnterpriseClient {
      * @param engineGroupId unique engine group id for the engine(s) to be used to execute the scan
      * @return true on success; otherwise, false
      */
-    boolean saveConfig(String authToken, String name, String url, String engineGroupId);
+    boolean saveConfig(String authToken, String name, URL url, String engineGroupId);
 
     /**
      * gets the vulnerability summary XML as a String

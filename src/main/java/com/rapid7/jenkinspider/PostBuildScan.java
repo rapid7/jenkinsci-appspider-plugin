@@ -26,6 +26,8 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -119,11 +121,11 @@ public class PostBuildScan extends Notifier {
         try {
             ContentHelper contentHelper = new ContentHelper(log);
             StandardEnterpriseClient client = new StandardEnterpriseClient(
-                    new HttpClientService(new HttpClientFactory(allowSelfSignedCertificate).getClient(), contentHelper, log),
-                    appSpiderEntUrl,
-                    new ApiSerializer(log),
-                    contentHelper,
-                    log);
+                new HttpClientService(new HttpClientFactory(allowSelfSignedCertificate).getClient(), contentHelper, log),
+                appSpiderEntUrl,
+                new ApiSerializer(log),
+                contentHelper,
+                log);
             ScanSettings settings = new ScanSettings(configName, reportName, true, generateReport, scanConfigName, scanConfigUrl, scanConfigEngineGroupName);
 
             Scan scan = new Scan(client, settings, log);
@@ -148,6 +150,7 @@ public class PostBuildScan extends Notifier {
             log.println(e.toString());
             return false;
         }
+
     }
 
     // Overridden for better type safety.
@@ -171,8 +174,6 @@ public class PostBuildScan extends Notifier {
     public static final class DescriptorImp extends BuildStepDescriptor<Publisher> {
 
         private String appSpiderEntUrl;
-        @SuppressWarnings("legacy setting, if removed there's a warning in jenkisn about it")
-        private String appSpiderApiKey;
         private String appSpiderUsername;
         private String appSpiderPassword;
         private boolean appSpiderAllowSelfSignedCertificate;
@@ -244,7 +245,26 @@ public class PostBuildScan extends Notifier {
         }
 
         private StandardEnterpriseClient buildEnterpriseClient(CloseableHttpClient httpClient, String endpoint) {
-            LoggerFacade logger = new ConsoleLoggerFacade();
+            LoggerFacade logger = new LoggerFacade() {
+                final java.util.logging.Logger logger = java.util.logging.Logger.getLogger("appspider-plugin");
+                @Override
+                public void println(String message) {
+                    logger.log(Level.INFO, message);
+                }
+                @Override
+                public void info(String message) {
+                    logger.log(Level.INFO, message);
+                }
+                @Override
+                public void warn(String message) {
+                    logger.log(Level.WARNING, message);
+                }
+                @Override
+                public void severe(String message) {
+                    logger.log(Level.SEVERE, message);
+                }
+            };
+
             ContentHelper contentHelper = new ContentHelper(logger);
             return new StandardEnterpriseClient(
                     new HttpClientService(httpClient, contentHelper, logger),
@@ -271,10 +291,7 @@ public class PostBuildScan extends Notifier {
          */
         public ListBoxModel doFillConfigNameItems() {
             scanConfigNames = getConfigNames();
-            ListBoxModel items = new ListBoxModel();
-            items.add("[Select a scan config name]"); // Adding a default "Pick a scan configuration" entry
-            items.addAll(Arrays.stream(scanConfigEngines).map(ListBoxModel.Option::new).collect(Collectors.toList()));
-            return items;
+            return buildListBoxModel("[Select a scan config name]", scanConfigNames);
         }
 
         /**
@@ -284,30 +301,37 @@ public class PostBuildScan extends Notifier {
          */
         public ListBoxModel doFillScanConfigEngineGroupNameItems() {
             scanConfigEngines = getEngineGroups();
-            ListBoxModel items = new ListBoxModel();
-            items.add("[Select an engine group name]"); // Adding a default "Pick a engine group name" entry
-            items.addAll(Arrays.stream(scanConfigEngines).map(ListBoxModel.Option::new).collect(Collectors.toList()));
-            return items;
+            return buildListBoxModel("[Select an engine group name]", scanConfigEngines);
         }
 
+        private static ListBoxModel buildListBoxModel(String introduction, String[] items) {
+            ListBoxModel model = new ListBoxModel();
+            model.add(introduction); // Adding a default "Pick a scan configuration" entry
+            model.addAll(Arrays.stream(items).map(ListBoxModel.Option::new).collect(Collectors.toList()));
+            return model;
+        }
+
+
         /**
-         * @param appSpiderEntUrl
-         * @param appSpiderUsername
-         * @param appSpiderPassword
+         * calls the login endpoint with the provided credentials reporting success/failure back to the user via form validation
+         * @param allowSelfSignedCertificate If true certificate errors will be ignored, only meaningful if URL is using https
+         * @param appSpiderEntUrl Full URL path including protocol to the appspider rest api endpoint
+         * @param username Username used for authentication
+         * @param password Password used for authentication
          * @return FormValidation result of the credentials test
          */
-        public FormValidation doTestCredentials(@QueryParameter("appSpiderEntUrl") final String appSpiderEntUrl,
-                                                @QueryParameter("appSpiderUsername") final String appSpiderUsername,
-                                                @QueryParameter("appSpiderPassword") final String appSpiderPassword) {
-            return executeRequest(appSpiderEntUrl, client -> {
-                if (client.testAuthentication(appSpiderUsername, appSpiderPassword)) {
+        public FormValidation doTestCredentials(@QueryParameter("appSpiderAllowSelfSignedCertificate") final boolean allowSelfSignedCertificate,
+                                                @QueryParameter("appSpiderEntUrl") final String appSpiderEntUrl,
+                                                @QueryParameter("appSpiderUsername") final String username,
+                                                @QueryParameter("appSpiderPassword") final String password) {
+            return executeRequest(appSpiderEntUrl, allowSelfSignedCertificate, client -> {
+                if (!client.testAuthentication(username, password)) {
                     return FormValidation.error("Invalid username / password combination");
                 } else {
                     return FormValidation.ok("Connected Successfully.");
                 }
             }, FormValidation.error("Invalid username / password combination"));
         }
-
 
         public FormValidation doValidateNewScanConfig(@QueryParameter("scanConfigName") final String scanConfigName,
                                                       @QueryParameter("scanConfigUrl") final String scanConfigUrl) {
@@ -338,7 +362,7 @@ public class PostBuildScan extends Notifier {
 
         @FunctionalInterface
         interface AuthorizedRequest<T> {
-            public T executeRequest(EnterpriseClient client, String authKey);
+            T executeRequest(EnterpriseClient client, String authKey);
         }
 
         /**
@@ -355,11 +379,11 @@ public class PostBuildScan extends Notifier {
          */
         private String[] getEngineGroups() {
             return executeRequestWithAuthorization((client, authKey) ->
-                client.getEngineNamesGroupForClient(authKey).orElse(new String[0]),
+                client.getEngineGroupNamesForClient(authKey).orElse(new String[0]),
                 new String[0]);
         }
 
-        private <T> T executeRequest(String endpoint,  Function<EnterpriseClient, T> supplier, T errorResult) {
+        private <T> T executeRequest(String endpoint, boolean appSpiderAllowSelfSignedCertificate, Function<EnterpriseClient, T> supplier, T errorResult) {
             if (Objects.isNull(supplier))
                 return errorResult;
 

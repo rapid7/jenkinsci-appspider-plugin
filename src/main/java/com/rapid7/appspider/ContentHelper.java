@@ -19,6 +19,7 @@ import org.json.JSONObject;
 import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -53,7 +54,7 @@ public class ContentHelper {
             JSONArray array = jsonObject.getJSONArray(key);
             return Optional.of(array);
         } catch (JSONException e) {
-            logger.println(e.toString());
+            logger.severe(e.toString());
             return Optional.empty();
         }
     }
@@ -109,9 +110,12 @@ public class ContentHelper {
      * @return on success an Optional containing a JSONObject; otherwise, Optional.empty()
      */
     public Optional<JSONObject> responseToJSONObject(HttpResponse response) {
-        return isSuccessStatusCode(response)
-            ? asJson(response.getEntity())
-            : Optional.empty();
+        if (isSuccessStatusCode(response)) {
+            return asJson(response.getEntity());
+        }
+
+        logResponseFailure("request failed", response);
+        return Optional.empty();
     }
 
     /**
@@ -124,31 +128,34 @@ public class ContentHelper {
             try {
                 return Optional.of(new JSONObject(EntityUtils.toString(entity)));
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.severe(e.toString());
             }
         }
         return Optional.empty();
     }
     /**
      * extracts the key/value pairs from JSONObject and returns them as a Map{String, String}
+     * @param key key in the json object to serve as key in the map
+     * @param value value in the json object to serve as value in the map
      * @param optionalJsonObject Optional{JSONObject} to extract key/value pairs from if present
      * @return on successs a Map{String, String} of key/value pairs from JSONObject;
      *         otherwiwse Optional.empty()
      */
-    public Optional<Map<String, String>> asIdToNameMapOfStringToString(Optional<JSONObject> optionalJsonObject) {
+    public Optional<Map<String, String>> asMapOfStringToString(String key, String value, Optional<JSONObject> optionalJsonObject) {
         return optionalJsonObject.flatMap(json ->
         {
             try {
-                return Optional.of(json.getJSONArray("EngineGroups")
-                    .toList()
-                    .stream()
-                    .filter(obj -> obj instanceof JSONObject)
-                    .map(obj -> (JSONObject) obj)
-                    .collect(Collectors.toMap(
-                        obj -> obj.getString("Id"),
-                        obj -> obj.getString("Name"))));
+                JSONArray array = json.getJSONArray("EngineGroups");
+                Map<String, String> mapOfStringToString = new HashMap<>();
+                if (Objects.isNull(array))
+                    return Optional.empty();
+                for (int i =0; i< array.length(); i++) {
+                    JSONObject jsonObject = array.getJSONObject(i);
+                    mapOfStringToString.put(jsonObject.getString(key), jsonObject.getString(value));
+                }
+                return Optional.of(mapOfStringToString);
             } catch (JSONException e) {
-                logger.println(e.toString());
+                logger.severe(e.toString());
                 return Optional.empty();
             }
         });
@@ -170,7 +177,7 @@ public class ContentHelper {
             IOUtils.copy(new InputStreamReader(entity.getContent(), StandardCharsets.UTF_8), writer);
             return Optional.of(writer.toString());
         } catch (IOException e) {
-            logger.println(e.toString());
+            logger.severe(e.toString());
             return Optional.empty();
         }
     }
@@ -186,8 +193,20 @@ public class ContentHelper {
         try  {
             return Optional.of(entity.getContent());
         } catch (IOException e) {
-            logger.println(e.toString());
+            logger.severe(e.toString());
             return Optional.empty();
+        }
+    }
+
+    private void logResponseFailure(String introduction, HttpResponse response) {
+        JSONObject error = asJson(response.getEntity()).orElse(new JSONObject());
+        try {
+            final String errorMessage = error.getString("ErrorMessage");
+            final String reason = error.getString("Reason");
+            logger.severe(String.format("%s: '%s'.  with reason '%s'", introduction, errorMessage, reason));
+        } catch (JSONException e) {
+            logger.severe(String.format("%s: %s.%nexception: %s",
+                    introduction, response.getStatusLine().getStatusCode(), e.toString()));
         }
     }
 }

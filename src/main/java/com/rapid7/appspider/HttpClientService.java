@@ -53,7 +53,7 @@ public class HttpClientService implements ClientService {
             return contentHelper.responseToJSONObject(httpClient.execute(request));
 
         } catch (IOException e) {
-            logger.println(e.toString());
+            logger.severe(e.toString());
             return Optional.empty();
         }
     }
@@ -71,7 +71,7 @@ public class HttpClientService implements ClientService {
                 : Optional.empty();
 
         } catch (IOException e) {
-            logger.println(e.toString());
+            logger.severe(e.toString());
             return Optional.empty();
         }
     }
@@ -118,7 +118,7 @@ public class HttpClientService implements ClientService {
             return buildGetRequestUsingFormUrlEncoding(builder.build().toString(), authToken);
 
         } catch (URISyntaxException e) {
-            logger.println(e.toString());
+            logger.severe(e.toString());
             return Optional.empty();
         }
     }
@@ -180,7 +180,7 @@ public class HttpClientService implements ClientService {
             return Optional.of(request);
 
         } catch (UnsupportedEncodingException e) {
-            logger.println(e.toString());
+            logger.severe(e.toString());
             return Optional.empty();
         }
     }
