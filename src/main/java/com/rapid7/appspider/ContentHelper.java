@@ -54,7 +54,7 @@ public class ContentHelper {
             JSONArray array = jsonObject.getJSONArray(key);
             return Optional.of(array);
         } catch (JSONException e) {
-            logger.println(e.toString());
+            logger.severe(e.toString());
             return Optional.empty();
         }
     }
@@ -110,9 +110,12 @@ public class ContentHelper {
      * @return on success an Optional containing a JSONObject; otherwise, Optional.empty()
      */
     public Optional<JSONObject> responseToJSONObject(HttpResponse response) {
-        return isSuccessStatusCode(response)
-            ? asJson(response.getEntity())
-            : Optional.empty();
+        if (isSuccessStatusCode(response)) {
+            return asJson(response.getEntity());
+        }
+
+        logResponseFailure("request failed", response);
+        return Optional.empty();
     }
 
     /**
@@ -125,7 +128,7 @@ public class ContentHelper {
             try {
                 return Optional.of(new JSONObject(EntityUtils.toString(entity)));
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.severe(e.toString());
             }
         }
         return Optional.empty();
@@ -152,7 +155,7 @@ public class ContentHelper {
                 }
                 return Optional.of(mapOfStringToString);
             } catch (JSONException e) {
-                logger.println(e.toString());
+                logger.severe(e.toString());
                 return Optional.empty();
             }
         });
@@ -174,7 +177,7 @@ public class ContentHelper {
             IOUtils.copy(new InputStreamReader(entity.getContent(), StandardCharsets.UTF_8), writer);
             return Optional.of(writer.toString());
         } catch (IOException e) {
-            logger.println(e.toString());
+            logger.severe(e.toString());
             return Optional.empty();
         }
     }
@@ -190,8 +193,20 @@ public class ContentHelper {
         try  {
             return Optional.of(entity.getContent());
         } catch (IOException e) {
-            logger.println(e.toString());
+            logger.severe(e.toString());
             return Optional.empty();
+        }
+    }
+
+    private void logResponseFailure(String introduction, HttpResponse response) {
+        JSONObject error = asJson(response.getEntity()).orElse(new JSONObject());
+        try {
+            final String errorMessage = error.getString("ErrorMessage");
+            final String reason = error.getString("Reason");
+            logger.severe(String.format("%s: '%s'.  with reason '%s'", introduction, errorMessage, reason));
+        } catch (JSONException e) {
+            logger.severe(String.format("%s: %s.%nexception: %s",
+                    introduction, response.getStatusLine().getStatusCode(), e.toString()));
         }
     }
 }

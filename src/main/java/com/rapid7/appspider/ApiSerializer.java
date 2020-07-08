@@ -13,6 +13,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
 
@@ -42,7 +43,7 @@ public class ApiSerializer {
                     ? Optional.empty()
                     : Optional.of(token);
         } catch (JSONException e) {
-            logger.println(e.toString());
+            logger.severe(e.toString());
             return Optional.empty();
         }
     }
@@ -58,7 +59,7 @@ public class ApiSerializer {
         try {
             return jsonObject.getBoolean("IsSuccess");
         } catch (JSONException e) {
-            logger.println(e.toString());
+            logger.severe(e.toString());
             return false;
         }
     }
@@ -67,7 +68,7 @@ public class ApiSerializer {
         try {
             return new ScanResult(jsonObject);
         } catch (IllegalArgumentException e) {
-            logger.println(e.toString());
+            logger.severe(e.toString());
             return new ScanResult(false, "");
         }
     }
@@ -97,7 +98,7 @@ public class ApiSerializer {
                 ? Optional.empty()
                 : Optional.of(status);
         } catch (JSONException e) {
-            logger.println(e.toString());
+            logger.severe(e.toString());
             return Optional.empty();
         }
     }
@@ -122,7 +123,7 @@ public class ApiSerializer {
                         continue;
                     names.add(name);
                 } catch (JSONException e) {
-                    logger.println(e.toString());
+                    logger.severe(e.toString());
                 }
             }
         }
@@ -133,21 +134,21 @@ public class ApiSerializer {
      * constructs scan config XML document using template with provided name and target
      * @param template template used to produce XML
      * @param name name of the new scan config
-     * @param target target of the scan config
+     * @param targetURL target of the scan config
      * @return String representing scan config in XML format
      * @throws IOException thrown if I/O error occurs during template processing
      * @throws TemplateException if a problem occurs during template processing
      * @throws IllegalArgumentException if any of the provided arguments are null, or in the case of Strings empty
+     * @throws MalformedURLException if target is not a va
      */
-    public String getScanConfigXml(Template template, String name, String target) throws IOException, TemplateException {
+    public String getScanConfigXml(Template template, String name, URL targetURL) throws IOException, TemplateException {
         if (Objects.isNull(template))
             throw new IllegalArgumentException("template cannot be null");
         if (Objects.isNull(name) || name.isEmpty())
             throw new IllegalArgumentException("name cannot be null or empty");
-        if (Objects.isNull(target) || target.isEmpty())
+        if (Objects.isNull(targetURL))
             throw new IllegalArgumentException("targetURL cannot be null");
 
-        URL targetURL = new URL(target);
         Map<String, String> templateData = new HashMap<>();
         templateData.put("name", name);
         templateData.put("url", targetURL.toString());
@@ -179,7 +180,7 @@ public class ApiSerializer {
         try {
             return Optional.of(config.getString("Id"));
         } catch (JSONException e) {
-            logger.println(e.toString());
+            logger.severe(e.toString());
             return Optional.empty();
         }
     }
@@ -207,7 +208,7 @@ public class ApiSerializer {
             logger.println("no config with name " + configName + " was found.");
             return Optional.empty();
         } catch (JSONException e) {
-            logger.println(e.toString());
+            logger.severe(e.toString());
             return Optional.empty();
         }
 

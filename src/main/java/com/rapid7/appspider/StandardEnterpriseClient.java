@@ -16,6 +16,7 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
@@ -290,7 +291,7 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
      * @return true on success; otherwise, false
      */
     @Override
-    public boolean saveConfig(String authToken, String name, String url, String engineGroupId) {
+    public boolean saveConfig(String authToken, String name, URL url, String engineGroupId) {
 
         try {
             Template template = new Configuration().getTemplate(

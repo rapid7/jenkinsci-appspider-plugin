@@ -26,6 +26,8 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -243,7 +245,26 @@ public class PostBuildScan extends Notifier {
         }
 
         private StandardEnterpriseClient buildEnterpriseClient(CloseableHttpClient httpClient, String endpoint) {
-            LoggerFacade logger = new ConsoleLoggerFacade();
+            LoggerFacade logger = new LoggerFacade() {
+                final java.util.logging.Logger logger = java.util.logging.Logger.getLogger("appspider-plugin");
+                @Override
+                public void println(String message) {
+                    logger.log(Level.INFO, message);
+                }
+                @Override
+                public void info(String message) {
+                    logger.log(Level.INFO, message);
+                }
+                @Override
+                public void warn(String message) {
+                    logger.log(Level.WARNING, message);
+                }
+                @Override
+                public void severe(String message) {
+                    logger.log(Level.SEVERE, message);
+                }
+            };
+
             ContentHelper contentHelper = new ContentHelper(logger);
             return new StandardEnterpriseClient(
                     new HttpClientService(httpClient, contentHelper, logger),
@@ -292,24 +313,25 @@ public class PostBuildScan extends Notifier {
 
 
         /**
-         * @param appSpiderEntUrl
-         * @param appSpiderUsername
-         * @param appSpiderPassword
+         * calls the login endpoint with the provided credentials reporting success/failure back to the user via form validation
+         * @param allowSelfSignedCertificate If true certificate errors will be ignored, only meaningful if URL is using https
+         * @param appSpiderEntUrl Full URL path including protocol to the appspider rest api endpoint
+         * @param username Username used for authentication
+         * @param password Password used for authentication
          * @return FormValidation result of the credentials test
          */
-        public FormValidation doTestCredentials(@QueryParameter("appSpiderAllowSelfSignedCertificate") final boolean appSpiderAllowSelfSignedCertificate,
+        public FormValidation doTestCredentials(@QueryParameter("appSpiderAllowSelfSignedCertificate") final boolean allowSelfSignedCertificate,
                                                 @QueryParameter("appSpiderEntUrl") final String appSpiderEntUrl,
-                                                @QueryParameter("appSpiderUsername") final String appSpiderUsername,
-                                                @QueryParameter("appSpiderPassword") final String appSpiderPassword) {
-            return executeRequest(appSpiderEntUrl, appSpiderAllowSelfSignedCertificate, client -> {
-                if (!client.testAuthentication(appSpiderUsername, appSpiderPassword)) {
+                                                @QueryParameter("appSpiderUsername") final String username,
+                                                @QueryParameter("appSpiderPassword") final String password) {
+            return executeRequest(appSpiderEntUrl, allowSelfSignedCertificate, client -> {
+                if (!client.testAuthentication(username, password)) {
                     return FormValidation.error("Invalid username / password combination");
                 } else {
                     return FormValidation.ok("Connected Successfully.");
                 }
             }, FormValidation.error("Invalid username / password combination"));
         }
-
 
         public FormValidation doValidateNewScanConfig(@QueryParameter("scanConfigName") final String scanConfigName,
                                                       @QueryParameter("scanConfigUrl") final String scanConfigUrl) {
@@ -340,7 +362,7 @@ public class PostBuildScan extends Notifier {
 
         @FunctionalInterface
         interface AuthorizedRequest<T> {
-            public T executeRequest(EnterpriseClient client, String authKey);
+            T executeRequest(EnterpriseClient client, String authKey);
         }
 
         /**

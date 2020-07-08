@@ -18,7 +18,7 @@
       <f:password />
     </f:entry>
     <f:validateButton
-      title="Test Credentials" method="testCredentials" with="appSpiderEntUrl,appSpiderUsername,appSpiderPassword" />
+      title="Test Credentials" method="testCredentials" with="appSpiderAllowSelfSignedCertificate,appSpiderEntUrl,appSpiderUsername,appSpiderPassword" />
   </f:section>
 
 </f:section>

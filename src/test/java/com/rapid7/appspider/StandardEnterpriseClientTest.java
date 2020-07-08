@@ -6,10 +6,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -253,7 +252,7 @@ class StandardEnterpriseClientTest {
             .configureIsScanFinished(false, true, true)
             .configureEnterpriseClient();
 
-        boolean isFinished = context.getEnterpriseClient().hasReport(context.getExpectedAuthToken(), context.getExpectedScanId());
+        boolean isFinished = context.getEnterpriseClient().isScanFinished(context.getExpectedAuthToken(), context.getExpectedScanId());
 
         assertFalse(isFinished);
     }
@@ -275,9 +274,9 @@ class StandardEnterpriseClientTest {
             .configureHasReport(true, true, false)
             .configureEnterpriseClient();
 
-        boolean isFinished = context.getEnterpriseClient().hasReport(context.getExpectedAuthToken(), context.getExpectedScanId());
+        boolean hasReport = context.getEnterpriseClient().hasReport(context.getExpectedAuthToken(), context.getExpectedScanId());
 
-        assertFalse(isFinished);
+        assertFalse(hasReport);
     }
     @Test
     void hasReportIsFalseWhenResultIsTrueAndIsSuccessIsFalse() throws IOException {
@@ -286,9 +285,9 @@ class StandardEnterpriseClientTest {
             .configureHasReport(true, false, true)
             .configureEnterpriseClient();
 
-        boolean isFinished = context.getEnterpriseClient().hasReport(context.getExpectedAuthToken(), context.getExpectedScanId());
+        boolean hasReport = context.getEnterpriseClient().hasReport(context.getExpectedAuthToken(), context.getExpectedScanId());
 
-        assertFalse(isFinished);
+        assertFalse(hasReport);
     }
     @Test
     void hasReportIsFalseWhenApiCallFails() throws IOException {
@@ -297,9 +296,9 @@ class StandardEnterpriseClientTest {
             .configureHasReport(false, true, true)
             .configureEnterpriseClient();
 
-        boolean isFinished = context.getEnterpriseClient().isScanFinished(context.getExpectedAuthToken(), context.getExpectedScanId());
+        boolean hasReport = context.getEnterpriseClient().hasReport(context.getExpectedAuthToken(), context.getExpectedScanId());
 
-        assertFalse(isFinished);
+        assertFalse(hasReport);
     }
 
     @Test
@@ -323,6 +322,137 @@ class StandardEnterpriseClientTest {
         Optional<String[]> configs = context.getEnterpriseClient().getConfigNames(context.getExpectedAuthToken());
 
         assertFalse(configs.isPresent());
+    }
+
+    @Test
+    void saveConfigIsTrueWhenResultIsSuccess() throws IOException {
+        context
+            .arrangeExpectedValues()
+            .configureSaveConfig(true, true)
+            .configureEnterpriseClient();
+
+        boolean saved = context.getEnterpriseClient().saveConfig(
+                context.getExpectedAuthToken(),
+                "name" + UUID.randomUUID().toString(),
+                new URL("http://www.webscantest.com"),
+                "engine" + UUID.randomUUID().toString());
+
+        assertTrue(saved);
+    }
+
+    @Test
+    void saveConfigIsFalseWhenResultIsFail() throws IOException {
+        context
+            .arrangeExpectedValues()
+            .configureSaveConfig(true, false)
+            .configureEnterpriseClient();
+
+        boolean saved = context.getEnterpriseClient().saveConfig(
+                context.getExpectedAuthToken(),
+                "name" + UUID.randomUUID().toString(),
+                new URL("http://www.webscantest.com"),
+                "engine" + UUID.randomUUID().toString());
+
+        assertFalse(saved);
+    }
+    @Test
+    void saveConfigIsFalseWhenApiCallFails() throws IOException {
+        context
+            .arrangeExpectedValues()
+            .configureSaveConfig(false, true)
+            .configureEnterpriseClient();
+
+        boolean saved = context.getEnterpriseClient().saveConfig(
+                context.getExpectedAuthToken(),
+                "name" + UUID.randomUUID().toString(),
+                new URL("http://www.webscantest.com"),
+                "engine" + UUID.randomUUID().toString());
+
+        assertFalse(saved);
+    }
+
+    @Test
+    void getVulnerabilitySummaryXmlIsPresentWhenSuccessful() throws IOException {
+        String xml = String.format("<?xml><vulns id=\"%s\"></vulns>", UUID.randomUUID());
+        context
+            .arrangeExpectedValues()
+            .configureGetVulnerabilitiesSummaryXml(true, xml)
+            .configureEnterpriseClient();
+
+        Optional<String> actualXml = context.getEnterpriseClient().getVulnerabilitiesSummaryXml(context.getExpectedAuthToken(), context.getExpectedScanId());
+
+        assertTrue(actualXml.isPresent());
+    }
+    @Test
+    void getVulnerabilitySummaryXmlCorrectResponseWhenSuccessful() throws IOException {
+        String xml = String.format("<?xml><vulns id=\"%s\"></vulns>", UUID.randomUUID());
+        context
+                .arrangeExpectedValues()
+                .configureGetVulnerabilitiesSummaryXml(true, xml)
+                .configureEnterpriseClient();
+
+        Optional<String> actualXml = context.getEnterpriseClient().getVulnerabilitiesSummaryXml(context.getExpectedAuthToken(), context.getExpectedScanId());
+
+        assertEquals(xml, actualXml.orElse("wrong"));
+    }
+
+    @Test
+    void getVulnerabilitySummaryXmlIsNotPresentWhenFails() throws IOException {
+        String xml = String.format("<?xml><vulns id=\"%s\"></vulns>", UUID.randomUUID());
+        context
+                .arrangeExpectedValues()
+                .configureGetVulnerabilitiesSummaryXml(false, xml)
+                .configureEnterpriseClient();
+
+        Optional<String> actualXml = context.getEnterpriseClient().getVulnerabilitiesSummaryXml(context.getExpectedAuthToken(), context.getExpectedScanId());
+
+        assertFalse(actualXml.isPresent());
+    }
+
+    @Test
+    void getReportZipIsPresentWhenSuccessful() throws IOException {
+        String content = UUID.randomUUID().toString();
+        byte[] encodedContent = Base64.getEncoder().encode(content.getBytes());
+        context
+            .arrangeExpectedValues()
+            .configureGetReportZip(true, encodedContent)
+            .configureEnterpriseClient();
+
+        Optional<InputStream> inputStream = context.getEnterpriseClient().getReportZip(context.getExpectedAuthToken(), context.getExpectedScanId());
+
+        assertTrue(inputStream.isPresent());
+        inputStream.get().close();
+    }
+    @Test
+    void getReportZipCorrectResultValueSuccessful() throws IOException {
+        String content = UUID.randomUUID().toString();
+        byte[] encodedContent = Base64.getEncoder().encode(content.getBytes());
+        context
+            .arrangeExpectedValues()
+            .configureGetReportZip(true, encodedContent)
+            .configureEnterpriseClient();
+
+        Optional<InputStream> maybeInputStream = context.getEnterpriseClient().getReportZip(context.getExpectedAuthToken(), context.getExpectedScanId());
+        try (InputStream inputStream = maybeInputStream.orElseThrow(() -> new RuntimeException("test failure"))) {
+            byte[] encodedResponse = new byte[inputStream.available()];
+
+            assertEquals(inputStream.available(), inputStream.read(encodedResponse));
+            String decoded = new String(Base64.getDecoder().decode(encodedResponse));
+            assertEquals(content, decoded);
+        }
+    }
+    @Test
+    void getReportZipIsNotPresentWhenFails() throws IOException {
+        String content = UUID.randomUUID().toString();
+        byte[] encodedContent = Base64.getEncoder().encode(content.getBytes());
+        context
+            .arrangeExpectedValues()
+            .configureGetReportZip(false, encodedContent)
+            .configureEnterpriseClient();
+
+        Optional<InputStream> inputStream = context.getEnterpriseClient().getReportZip(context.getExpectedAuthToken(), context.getExpectedScanId());
+
+        assertFalse(inputStream.isPresent());
     }
 
 }

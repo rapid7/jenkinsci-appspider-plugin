@@ -11,9 +11,9 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.mockito.ArgumentMatcher;
@@ -22,10 +22,10 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.rapid7.appspider.Utility.toStringArray;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static com.rapid7.appspider.Utility.toStringArray;
 
 public class EnterpriseClientTestContext implements AutoCloseable {
     private static final String AUTHENTICATION_LOGIN = "/Authentication/Login";
@@ -36,6 +36,9 @@ public class EnterpriseClientTestContext implements AutoCloseable {
     private static final String GET_SCAN_STATUS = "/Scan/GetScanStatus";
     private static final String IS_SCAN_FINISHED = "/Scan/IsScanFinished";
     private static final String HAS_REPORT = "/Scan/HasReport";
+    private static final String SAVE_CONFIG = "/Config/SaveConfig";
+    private static final String GET_VULNERABILITIES_SUMMARY = "/Report/GetVulnerabilitiesSummaryXml";
+    private static final String GET_REPORT_ZIP = "/Report/GetReportZip";
 
     private LoggerFacade mockLogger;
     private ContentHelper mockContentHelper;
@@ -202,6 +205,24 @@ public class EnterpriseClientTestContext implements AutoCloseable {
         ArgumentMatcher<HttpRequestBase> getConfigsRequest = request -> request instanceof HttpGet &&  request.getURI().toString().startsWith(url + HAS_REPORT);
         HttpResponse response = getMockJsonResponseFromJSON(apiCallIsSuccess, getJsonFromEntries(getEntryFrom("IsSuccess", isSuccess), getEntryFrom("Result", resultIsSuccess)));
         when(mockHttpClient.execute(argThat(getConfigsRequest))).thenReturn(response);
+        return this;
+    }
+    public EnterpriseClientTestContext configureSaveConfig(boolean apiCallIsSuccess, boolean isSuccess) throws IOException {
+        ArgumentMatcher<HttpRequestBase> saveConfigRequest = request -> request instanceof HttpPost &&  request.getURI().toString().startsWith(url + SAVE_CONFIG);
+        HttpResponse response = getMockJsonResponseFromJSON(apiCallIsSuccess, getJsonFromEntries(getEntryFrom("IsSuccess", isSuccess)));
+        when(mockHttpClient.execute(argThat(saveConfigRequest))).thenReturn(response);
+        return this;
+    }
+    public EnterpriseClientTestContext configureGetVulnerabilitiesSummaryXml(boolean apiCallIsSuccess, String xml) throws IOException {
+        ArgumentMatcher<HttpRequestBase> getRequest = request -> request instanceof HttpGet &&  request.getURI().toString().startsWith(url + GET_VULNERABILITIES_SUMMARY);
+        HttpResponse response = getMockResponseFromEntity(apiCallIsSuccess, new StringEntity(xml, ContentType.TEXT_XML));
+        when(mockHttpClient.execute(argThat(getRequest))).thenReturn(response);
+        return this;
+    }
+    public EnterpriseClientTestContext configureGetReportZip(boolean apiCallIsSuccess, byte[] content) throws IOException {
+        ArgumentMatcher<HttpRequestBase> getRequest = request -> request instanceof HttpGet &&  request.getURI().toString().startsWith(url + GET_REPORT_ZIP);
+        HttpResponse response = getMockResponseFromEntity(apiCallIsSuccess, new ByteArrayEntity(content));
+        when(mockHttpClient.execute(argThat(getRequest))).thenReturn(response);
         return this;
     }
 

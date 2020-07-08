@@ -5,10 +5,9 @@
 package com.rapid7.appspider;
 
 import com.rapid7.appspider.datatransferobjects.ScanResult;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.io.InputStream;
+import java.net.URL;
 import java.util.Optional;
 
 public interface EnterpriseClient {
@@ -100,7 +99,7 @@ public interface EnterpriseClient {
      * @param engineGroupId unique engine group id for the engine(s) to be used to execute the scan
      * @return true on success; otherwise, false
      */
-    boolean saveConfig(String authToken, String name, String url, String engineGroupId);
+    boolean saveConfig(String authToken, String name, URL url, String engineGroupId);
 
     /**
      * gets the vulnerability summary XML as a String

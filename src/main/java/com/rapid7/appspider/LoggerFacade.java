@@ -6,4 +6,7 @@ package com.rapid7.appspider;
 
 public interface LoggerFacade {
     void println(String message);
+    void info(String message);
+    void warn(String message);
+    void severe(String message);
 }
