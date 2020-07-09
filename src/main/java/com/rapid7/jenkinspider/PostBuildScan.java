@@ -90,10 +90,9 @@ public class PostBuildScan extends Notifier {
     }
 
     /**
-     * @param build
-     * @param launcher
-     * @param listener
+     * {@inheritDoc}
      * @return boolean representing success or failure of the action to perform
+     * @throws InterruptedException if stop is requested by the user
      */
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
@@ -163,9 +162,10 @@ public class PostBuildScan extends Notifier {
 
 
     /**
+     * <p>
      * Descriptor for {@link PostBuildScan}. Used as a singleton.
      * The class is marked as public so that it can be accessed from views.
-     * <p>
+     *
      * <p>
      * See <tt>src/main/resources/hudson/plugins/hello_world/HelloWorldBuilder/*.jelly</tt>
      * for the actual HTML fragment for the configuration screen.
@@ -204,8 +204,7 @@ public class PostBuildScan extends Notifier {
         }
 
         /**
-         * @param aClass
-         * @return boolean
+         * {@inheritDoc}
          */
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             // Indicates that this builder can be used with all kinds of project types
