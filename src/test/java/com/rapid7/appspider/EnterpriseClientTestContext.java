@@ -40,10 +40,10 @@ public class EnterpriseClientTestContext implements AutoCloseable {
     private static final String GET_VULNERABILITIES_SUMMARY = "/Report/GetVulnerabilitiesSummaryXml";
     private static final String GET_REPORT_ZIP = "/Report/GetReportZip";
 
-    private LoggerFacade mockLogger;
-    private ContentHelper mockContentHelper;
-    private ApiSerializer mockApiSerializer;
-    private HttpClient mockHttpClient;
+    private final LoggerFacade mockLogger;
+    private final ContentHelper mockContentHelper;
+    private final ApiSerializer mockApiSerializer;
+    private final HttpClient mockHttpClient;
 
     private String expectedAuthToken;
     private String configId;
@@ -53,8 +53,7 @@ public class EnterpriseClientTestContext implements AutoCloseable {
     private String url;
     private Map<String, String> expectedEngineGroupsIdsByName;
     private Map<String, String> expectedEngineGroupsNamesForClient;
-    private List<EngineStub> engineGroupDetails;
-    private final String firstClientId;
+    private final List<EngineStub> engineGroupDetails;
 
     EnterpriseClientTestContext(String url) {
         this.url = url;
@@ -68,7 +67,7 @@ public class EnterpriseClientTestContext implements AutoCloseable {
         mockHttpClient = mock(HttpClient.class);
         engineGroupDetails = new ArrayList<>();
 
-        firstClientId = UUID.randomUUID().toString();
+        String firstClientId = UUID.randomUUID().toString();
         engineGroupDetails.add(new EngineStub(firstClientId));
         engineGroupDetails.add(new EngineStub(firstClientId));
         engineGroupDetails.add(new EngineStub(UUID.randomUUID().toString()));

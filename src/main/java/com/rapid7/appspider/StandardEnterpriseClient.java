@@ -38,6 +38,8 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
      * Instantiates a new instance of the EnterpriseClient class
      * @param clientService helper that works directly with lower level HttpClient methods
      * @param restEndPointUrl base endpoint including /rest/v1 or equilvalent path
+     * @param apiSerializer Helper class providing handling of HttpResponse to JSONObject methods
+     * @param contentHelper Helper class providing parsing and encoding methods to support api calls
      * @param logger logger used for diagnostic output
      * @throws IllegalArgumentException thrown if any of the arguments are null or if restEntPointUrl is empty
      */

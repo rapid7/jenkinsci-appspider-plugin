@@ -76,7 +76,6 @@ public class ContentHelper {
      * builds a StringEntity using the string provided by jsonObject.toString()
      * @param jsonObject jsonObject which provides String via toString
      * @return StringEntity containing the string value of jsonObject
-     * @throws UnsupportedEncodingException thrown by StringEntity
      */
     public StringEntity entityFrom(JSONObject jsonObject) {
         if (Objects.isNull(jsonObject))
