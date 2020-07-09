@@ -15,7 +15,10 @@ jobs:
       uses: actions/setup-java@v1
       with:
           java-version: 1.8
-    - name: Build (and test) with Maven
+    - name: Build with Maven
       run: mvn -B package
+      # This step may duplicate efforts of package but is done to make the results of the test more clear
+    - name: Test
+      run: mvn -B test
 
 
