@@ -5,6 +5,7 @@
 package com.rapid7.appspider;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -23,7 +24,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static com.rapid7.appspider.Utility.isSuccessStatusCode;
 
@@ -123,7 +123,7 @@ public class ContentHelper {
      * @return on success an Optional containing a JSONObject; otherwise, Optional.empty()
      */
     public Optional<JSONObject> asJson(HttpEntity entity) {
-        if (entity.getContentType().getValue().contains(MediaType.APPLICATION_JSON)) {
+        if (getContentTypeOrEmpty(entity).orElse("").contains(MediaType.APPLICATION_JSON)) {
             try {
                 return Optional.of(new JSONObject(EntityUtils.toString(entity)));
             } catch (IOException e) {
@@ -132,6 +132,7 @@ public class ContentHelper {
         }
         return Optional.empty();
     }
+
     /**
      * extracts the key/value pairs from JSONObject and returns them as a Map{String, String}
      * @param key key in the json object to serve as key in the map
@@ -168,7 +169,7 @@ public class ContentHelper {
     public Optional<String> getTextHtmlOrXmlContent(HttpEntity entity) {
         if (Objects.isNull(entity))
             return Optional.empty();
-        String contentType = entity.getContentType().getValue();
+        String contentType = getContentTypeOrEmpty(entity).orElse("");
         if (!contentType.contains(MediaType.TEXT_HTML) && !contentType.contains(MediaType.TEXT_XML))
             return Optional.empty();
 
@@ -197,6 +198,19 @@ public class ContentHelper {
         }
     }
 
+    private Optional<String> getContentTypeOrEmpty(HttpEntity entity) {
+        if (Objects.isNull(entity)) {
+            return Optional.empty();
+        }
+        Header contentType = entity.getContentType();
+        if (Objects.isNull(contentType)) {
+            return Optional.empty();
+        }
+        String value = contentType.getValue();
+        return !Objects.isNull(value)
+                ? Optional.of(value)
+                : Optional.empty();
+    }
     private void logResponseFailure(String introduction, HttpResponse response) {
         JSONObject error = asJson(response.getEntity()).orElse(new JSONObject());
         try {
