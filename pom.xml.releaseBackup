@@ -12,7 +12,7 @@
   <groupId>com.rapid7</groupId>
   <!-- <artifactId>jenkinspider</artifactId> -->
   <artifactId>jenkinsci-appspider-plugin</artifactId>
-  <version>1.0.13-SNAPSHOT</version>
+  <version>1.0.14-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <name>AppSpider Plugin</name>
