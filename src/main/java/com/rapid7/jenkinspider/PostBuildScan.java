@@ -182,6 +182,7 @@ public class PostBuildScan extends Notifier {
         private boolean appSpiderAllowSelfSignedCertificate;
         private String[] scanConfigNames;
         private String[] scanConfigEngines;
+        private static final String INVALID_CREDENTIALS = "Invalid username / password combination";
 
         public DescriptorImp() {
 
@@ -339,15 +340,15 @@ public class PostBuildScan extends Notifier {
             return executeRequest(appSpiderEntUrl, allowSelfSignedCertificate, client -> {
                 try {
                     if (!client.testAuthentication(username, password)) {
-                        return FormValidation.error("Invalid username / password combination");
+                        return FormValidation.error(INVALID_CREDENTIALS);
                     } else {
                         return FormValidation.ok("Connected Successfully.");
                     }
 
                 } catch (IllegalArgumentException e) {
-                    return FormValidation.error("Invalid username / password combination");
+                    return FormValidation.error(INVALID_CREDENTIALS);
                 }
-            }, FormValidation.error("Invalid username / password combination"));
+            }, FormValidation.error(INVALID_CREDENTIALS));
         }
 
         public FormValidation doValidateNewScanConfig(@QueryParameter("scanConfigName") final String scanConfigName,
