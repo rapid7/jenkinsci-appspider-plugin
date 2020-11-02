@@ -13,6 +13,7 @@ import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import hudson.util.Secret;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -27,7 +28,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -111,7 +111,10 @@ public class PostBuildScan extends Notifier {
         String appSpiderUsername = getDescriptor().getAppSpiderUsername();
         log.println("Value of AppSpider Username: " + appSpiderUsername);
 
-        String appSpiderPassword = getDescriptor().getAppSpiderPassword();
+        Secret secretAppSpiderPassword = getDescriptor().getAppSpiderPassword();
+        String appSpiderPassword = !Objects.isNull(secretAppSpiderPassword)
+            ? Secret.toString(secretAppSpiderPassword)
+            : "";
         log.println("Value of Scan Configuration name: " + configName);
 
         boolean allowSelfSignedCertificate = getDescriptor().getAppSpiderAllowSelfSignedCertificate();
@@ -175,7 +178,7 @@ public class PostBuildScan extends Notifier {
 
         private String appSpiderEntUrl;
         private String appSpiderUsername;
-        private String appSpiderPassword;
+        private Secret appSpiderPassword;
         private boolean appSpiderAllowSelfSignedCertificate;
         private String[] scanConfigNames;
         private String[] scanConfigEngines;
@@ -222,17 +225,29 @@ public class PostBuildScan extends Notifier {
         public String getAppSpiderEntUrl() {
             return appSpiderEntUrl;
         }
+        public void setAppSpiderEntUrl(String appSpiderEntUrl) {
+            this.appSpiderEntUrl = appSpiderEntUrl;
+        }
 
         public String getAppSpiderUsername() {
             return appSpiderUsername;
         }
+        public void setAppSpiderUsername(String appSpiderUsername) {
+            this.appSpiderUsername = appSpiderUsername;
+        }
 
-        public String getAppSpiderPassword() {
+        public Secret getAppSpiderPassword() {
             return appSpiderPassword;
+        }
+        public void setAppSpiderPassword(Secret appSpiderPassword) {
+            this.appSpiderPassword = appSpiderPassword;
         }
 
         public boolean getAppSpiderAllowSelfSignedCertificate() {
             return appSpiderAllowSelfSignedCertificate;
+        }
+        public void setAppSpiderAllowSelfSignedCertificate(boolean appSpiderAllowSelfSignedCertificate) {
+            this.appSpiderAllowSelfSignedCertificate = appSpiderAllowSelfSignedCertificate;
         }
 
         public String[] getScanConfigNames() {
@@ -275,10 +290,8 @@ public class PostBuildScan extends Notifier {
 
         @Override
         public boolean configure(StaplerRequest req, net.sf.json.JSONObject formData) throws FormException {
-            this.appSpiderEntUrl = formData.getString("appSpiderEntUrl");
-            this.appSpiderUsername = formData.getString("appSpiderUsername");
-            this.appSpiderPassword = formData.getString("appSpiderPassword");
-            this.appSpiderAllowSelfSignedCertificate = formData.getBoolean("appSpiderAllowSelfSignedCertificate");
+            req.bindJSON(this, formData);
+
             save();
             return super.configure(req, net.sf.json.JSONObject.fromObject(formData));
         }
@@ -324,10 +337,15 @@ public class PostBuildScan extends Notifier {
                                                 @QueryParameter("appSpiderUsername") final String username,
                                                 @QueryParameter("appSpiderPassword") final String password) {
             return executeRequest(appSpiderEntUrl, allowSelfSignedCertificate, client -> {
-                if (!client.testAuthentication(username, password)) {
+                try {
+                    if (!client.testAuthentication(username, password)) {
+                        return FormValidation.error("Invalid username / password combination");
+                    } else {
+                        return FormValidation.ok("Connected Successfully.");
+                    }
+
+                } catch (IllegalArgumentException e) {
                     return FormValidation.error("Invalid username / password combination");
-                } else {
-                    return FormValidation.ok("Connected Successfully.");
                 }
             }, FormValidation.error("Invalid username / password combination"));
         }
@@ -401,7 +419,11 @@ public class PostBuildScan extends Notifier {
 
             try (CloseableHttpClient httpClient = new HttpClientFactory(appSpiderAllowSelfSignedCertificate).getClient()) {
                 EnterpriseClient client = buildEnterpriseClient(httpClient, appSpiderEntUrl);
-                Optional<String> maybeAuthKey = client.login(appSpiderUsername, appSpiderPassword);
+                if (Objects.isNull(appSpiderPassword)) {
+                    return errorResult;
+                }
+
+                Optional<String> maybeAuthKey = client.login(appSpiderUsername, Secret.toString(appSpiderPassword));
                 if (!maybeAuthKey.isPresent()) {
                     FormValidation.error("Unauthorized");
                     return errorResult;
