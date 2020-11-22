@@ -5,6 +5,20 @@
 		}
 	],
 	"settings": {
-		"java.configuration.updateBuildConfiguration": "automatic"
-	}
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "files.exclude": {
+      ".settings": true,
+      ".gitignore": true,
+      ".factorypath": true,
+      ".classpath": true,
+      ".github": true,
+      ".project": true
+    }
+  },  
+  "extensions": {
+    "recommendations": [
+      "actuallyzach.jelly-language-support"
+    ]
+
+  }
 }
