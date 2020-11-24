@@ -22,7 +22,7 @@ public class ApiSerializer {
     private final LoggerFacade logger;
 
     public ApiSerializer(LoggerFacade logger) {
-        if (Objects.isNull(logger))
+        if (logger == null)
             throw new IllegalArgumentException("logger cannot be null");
         this.logger = logger;
     }
