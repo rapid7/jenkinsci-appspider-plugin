@@ -3,8 +3,6 @@ package com.rapid7.appspider.datatransferobjects;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.Objects;
-
 public class ScanResult {
     private final boolean isSuccess;
     private final String scanId;
@@ -14,7 +12,7 @@ public class ScanResult {
         this.scanId = scanId;
     }
     public ScanResult(JSONObject jsonObject) {
-        if (Objects.isNull(jsonObject))
+        if (jsonObject == null)
             throw new IllegalArgumentException("jsonObject cannot be null");
 
         try {
