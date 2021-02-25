@@ -19,12 +19,12 @@ public class Scan {
     private static final String FINISHED_SCANNING = SUCCESSFUL_SCAN + "|" + UNSUCCESSFUL_SCAN + "|" + FAILED_SCAN;
     private static final String UNAUTHORIZED_ERROR = "Unauthorized, please verify credentials and try again.";
 
-    private final StandardEnterpriseClient client;
+    private final EnterpriseClient client;
     private final ScanSettings settings;
     private final LoggerFacade log;
     private Optional<String> id;
 
-    public Scan(StandardEnterpriseClient client, ScanSettings settings, LoggerFacade log) {
+    public Scan(EnterpriseClient client, ScanSettings settings, LoggerFacade log) {
         if (Objects.isNull(client))
             throw new IllegalArgumentException("client cannot be null");
         if (Objects.isNull(settings))

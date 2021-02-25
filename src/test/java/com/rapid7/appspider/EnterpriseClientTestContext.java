@@ -152,7 +152,7 @@ public class EnterpriseClientTestContext implements AutoCloseable {
     }
 
     public EnterpriseClientTestContext configureEnterpriseClient() {
-        enterpriseClient = new StandardEnterpriseClient(new HttpClientService(mockHttpClient, mockContentHelper, mockLogger), url, mockApiSerializer, mockContentHelper, mockLogger);
+        enterpriseClient = new EnterpriseRestClient(new HttpClientService(mockHttpClient, mockContentHelper, mockLogger), url, mockApiSerializer, mockContentHelper, mockLogger);
         return this;
     }
 

@@ -12,7 +12,7 @@ import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class StandardEnterpriseClientTest {
+class EnterpriseRestClientTest {
 
     private static final String url = "https://appspider.rapid7.com/AppSpiderEnterprise/rest/v1";
     private EnterpriseClientTestContext context;

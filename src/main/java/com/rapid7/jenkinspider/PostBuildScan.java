@@ -122,7 +122,7 @@ public class PostBuildScan extends Notifier {
 
         try {
             ContentHelper contentHelper = new ContentHelper(log);
-            StandardEnterpriseClient client = new StandardEnterpriseClient(
+            EnterpriseRestClient client = new EnterpriseRestClient(
                 new HttpClientService(new HttpClientFactory(allowSelfSignedCertificate).getClient(), contentHelper, log),
                 appSpiderEntUrl,
                 new ApiSerializer(log),
@@ -259,7 +259,7 @@ public class PostBuildScan extends Notifier {
             return scanConfigEngines.clone();
         }
 
-        private StandardEnterpriseClient buildEnterpriseClient(CloseableHttpClient httpClient, String endpoint) {
+        private EnterpriseRestClient buildEnterpriseClient(CloseableHttpClient httpClient, String endpoint) {
             LoggerFacade logger = new LoggerFacade() {
                 final java.util.logging.Logger logger = java.util.logging.Logger.getLogger("appspider-plugin");
                 @Override
@@ -281,7 +281,7 @@ public class PostBuildScan extends Notifier {
             };
 
             ContentHelper contentHelper = new ContentHelper(logger);
-            return new StandardEnterpriseClient(
+            return new EnterpriseRestClient(
                     new HttpClientService(httpClient, contentHelper, logger),
                     endpoint,
                     new ApiSerializer(logger),
