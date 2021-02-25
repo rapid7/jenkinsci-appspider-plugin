@@ -21,11 +21,11 @@ public class Report {
 
     private static final int BUFFER_SIZE = 4096;
 
-    private final StandardEnterpriseClient client;
+    private final EnterpriseClient client;
     private final ScanSettings settings;
     private final LoggerFacade log;
 
-    public Report(StandardEnterpriseClient client, ScanSettings settings, LoggerFacade log) {
+    public Report(EnterpriseClient client, ScanSettings settings, LoggerFacade log) {
 
         if (Objects.isNull(client))
             throw new IllegalArgumentException("client cannot be null");

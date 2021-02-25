@@ -26,7 +26,7 @@ import java.util.Optional;
  * Provides methods to communicating with AppSpider Enterprise while obsuring the implementation
  * details of that communication.
  */
-public final class StandardEnterpriseClient implements EnterpriseClient {
+public final class EnterpriseRestClient implements EnterpriseClient {
 
     private final String restEndPointUrl;
     private final HttpClientService clientService;
@@ -43,7 +43,7 @@ public final class StandardEnterpriseClient implements EnterpriseClient {
      * @param logger logger used for diagnostic output
      * @throws IllegalArgumentException thrown if any of the arguments are null or if restEntPointUrl is empty
      */
-    public StandardEnterpriseClient(HttpClientService clientService, String restEndPointUrl, ApiSerializer apiSerializer, ContentHelper contentHelper, LoggerFacade logger) {
+    public EnterpriseRestClient(HttpClientService clientService, String restEndPointUrl, ApiSerializer apiSerializer, ContentHelper contentHelper, LoggerFacade logger) {
 
         if (Objects.isNull(restEndPointUrl) || restEndPointUrl.isEmpty())
             throw new IllegalArgumentException("restEndPointUrl cannot be null or empty");

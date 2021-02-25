@@ -20,5 +20,3 @@ jobs:
       # This step may duplicate efforts of package but is done to make the results of the test more clear
     - name: Test
       run: mvn -B test
-
-
