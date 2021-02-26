@@ -4,8 +4,9 @@
 
 package com.rapid7.appspider;
 
+import com.rapid7.appspider.datatransferobjects.ClientIdNamePair;
 import com.rapid7.appspider.datatransferobjects.ScanResult;
-import freemarker.template.Configuration;
+
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
 import org.apache.http.message.BasicNameValuePair;
@@ -18,6 +19,7 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -65,8 +67,7 @@ public final class EnterpriseRestClient implements EnterpriseClient {
 
 
     /**
-     * returns the full URL for the enterprise rest endpoint
-     * @return the full URL for the enterprise rest endpoint
+     * {@inheritDoc}
      */
     @Override
     public String getUrl() {
@@ -75,10 +76,7 @@ public final class EnterpriseRestClient implements EnterpriseClient {
 
     private static final String AUTHENTICATION_LOGIN = "/Authentication/Login";
     /**
-     * calls the /Authentication/Login endpoint with provided details
-     * @param username Username
-     * @param password Password
-     * @return on success Optional containing the authorization token; otherwise empty
+     * {@inheritDoc}
      */
     @Override
     public Optional<String> login(String username, String password) {
@@ -105,10 +103,7 @@ public final class EnterpriseRestClient implements EnterpriseClient {
     }
 
     /**
-     * calls the /Authentication/Login endpoint with provided details returning true if credentials are valid
-     * @param username Username
-     * @param password Password
-     * @return true if endpoint returns authorization token; otherwise, false
+     * {@inheritDoc}
      */
     @Override
     public boolean testAuthentication(String username, String password) {
@@ -118,11 +113,7 @@ public final class EnterpriseRestClient implements EnterpriseClient {
     // <editor-fold desc="Engine Group APIs">
 
     /**
-     * fetches the names of available engine groups
-     * @param authToken authorization token required to execute request
-     * @return On success an Optional containing an array of Strings
-     *         representing the names of available engine groups;
-     *         otherwise, Optional.empty()
+     * {@inheritDoc}
      */
     @Override
     public Optional<String[]> getEngineGroupNamesForClient(String authToken) {
@@ -132,11 +123,7 @@ public final class EnterpriseRestClient implements EnterpriseClient {
     }
 
     /**
-     * fetches the unique id of the engine group given by engineGroupName
-     * @param authToken authorization token required to execute request
-     * @param engineGroupName name of the engine to get the id of
-     * @return Optional containing the id of the engine group if found;
-     *         otherwise, Optional.empty()
+     * {@inheritDoc}
      */
     @Override
     public Optional<String> getEngineGroupIdFromName(String authToken, String engineGroupName) {
@@ -160,11 +147,7 @@ public final class EnterpriseRestClient implements EnterpriseClient {
     // <editor-fold desc="Scan APIs">
 
     /**
-     * starts a new scan using configuration matching configName
-     * @param authToken authorization token required to execute request
-     * @param configName name of the config to run
-     * @return ScanResult containing details on the success of the request and if successful the
-     *         unique id of the scan
+     * {@inheritDoc}
      */
     @Override
     public ScanResult runScanByConfigName(String authToken, String configName) {
@@ -177,10 +160,7 @@ public final class EnterpriseRestClient implements EnterpriseClient {
     private static final String GET_SCAN_STATUS = "/Scan/GetScanStatus";
     private static final String SCAN_ID = "scanId";
     /**
-     * gets the current status of the scan identified by scanId
-     * @param authToken authorization token required to execute request
-     * @param scanId unique scan identifier of the scan
-     * @return Optional containing current scan status as String on success; Otherwise Optional.empty()
+     * {@inheritDoc}
      */
     @Override
     public Optional<String> getScanStatus(String authToken, String scanId) {
@@ -193,10 +173,7 @@ public final class EnterpriseRestClient implements EnterpriseClient {
     private static final String IS_SCAN_FINISHED = "/Scan/IsScanFinished";
 
     /**
-     * determines if the scan identified by scanId has finished
-     * @param authToken authorization token required to execute request
-     * @param scanId unique scan identifier of the scan
-     * @return true if scan has finished regardless of how it finished, or false if it hasn't
+     * {@inheritDoc}
      */
     @Override
     public boolean isScanFinished(String authToken, String scanId) {
@@ -205,10 +182,7 @@ public final class EnterpriseRestClient implements EnterpriseClient {
 
     private static final String HAS_REPORT = "/Scan/HasReport";
     /**
-     * determines if a scan identified by scanId has a report or not
-     * @param authToken authorization token required to execute request
-     * @param scanId unique scan identifier of the scan
-     * @return true if the scan has a report; otherwise, false
+     * {@inheritDoc}
      */
     @Override
     public boolean hasReport(String authToken, String scanId) {
@@ -249,11 +223,12 @@ public final class EnterpriseRestClient implements EnterpriseClient {
     private static final String SAVE_CONFIG = "/Config/SaveConfig";
 
     /**
-     * calls /Config/GetConfigs endpoint and returns the JSONObject from those results matching configName
+     * calls the /Configs/SaveConfig endpoint using the provided data to create or update a configuration
      * @param authToken authorization token required to execute request
-     * @param configName name of the matching configuration to return
-     * @return Optional containing the JSONObject of the matching configuration on success;
-     *         otherwise, Optional.empty()
+     * @param name name of the scanconfig to save
+     * @param url target URL for the scan
+     * @param engineGroupId unique engine group id for the engine(s) to be used to execute the scan
+     * @return true on success; otherwise, false
      */
     private Optional<JSONObject> getConfigByName(String authToken, String configName) {
         return getConfigs(authToken)
@@ -273,9 +248,7 @@ public final class EnterpriseRestClient implements EnterpriseClient {
     }
 
     /**
-     * returns String[] of scan config names
-     * @param authToken authorization token required to execute request
-     * @return String[] of all scan config names
+     * {@inheritDoc}
      */
     @Override
     public Optional<String[]> getConfigNames(String authToken) {
@@ -285,19 +258,15 @@ public final class EnterpriseRestClient implements EnterpriseClient {
     }
 
     /**
-     * calls the /Configs/SaveConfig endpoint using the provided data to create or update a configuration
-     * @param authToken authorization token required to execute request
-     * @param name name of the scanconfig to save
-     * @param url target URL for the scan
-     * @param engineGroupId unique engine group id for the engine(s) to be used to execute the scan
-     * @return true on success; otherwise, false
+     * {@inheritDoc}
      */
     @Override
     public boolean saveConfig(String authToken, String name, URL url, String engineGroupId) {
 
         try {
-            Template template = new Configuration().getTemplate(
-            "src/main/java/com/rapid7/appspider/template/scanConfigTemplate.ftl");
+            Template template = FreemarkerConfiguration
+                .getInstance()
+                .getTemplate("scanConfigTemplate.ftl");
 
             String scanConfigXml = apiSerializer.getScanConfigXml(template, name, url);
             return clientService
@@ -331,11 +300,7 @@ public final class EnterpriseRestClient implements EnterpriseClient {
     private static final String GET_REPORT_ZIP = "/Report/GetReportZip";
 
     /**
-     * gets the vulnerability summary XML as a String
-     * @param authToken authorization token required to execute request
-     * @param scanId unique scan identifier of the scan to provide report for
-     * @return Optional containing the vulnerability summary as XML String on success;
-     *         otherwise, Optional.empty()
+     * {@inheritDoc}
      */
     @Override
     public Optional<String> getVulnerabilitiesSummaryXml(String authToken, String scanId) {
@@ -346,10 +311,7 @@ public final class EnterpriseRestClient implements EnterpriseClient {
     }
 
     /**
-     * provides InputStream for the request report zip
-     * @param authToken authorization token required to execute request
-     * @param scanId unique scan identifier of the scan to provide report for
-     * @return Optional containing InputStream on success; otherwise, Optional.empty()
+     * {@inheritDoc}
      */
     @Override
     public Optional<InputStream> getReportZip(String authToken, String scanId) {
@@ -357,6 +319,23 @@ public final class EnterpriseRestClient implements EnterpriseClient {
             .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_REPORT_ZIP, authToken, contentHelper.pairFrom(SCAN_ID, scanId))
             .flatMap(clientService::executeEntityRequest)
             .flatMap(contentHelper::getInputStream);
+    }
+
+    // </editor-fold>
+
+    // <editor-fold desc="Config APIs">
+    private static final String GET_CLIENTS = "/Config/GetClients";
+
+    /**
+     * {@inheritDoc}
+     */
+    public Optional<List<ClientIdNamePair>> getClientNameIdPairs(String authToken) {
+        return clientService
+            .buildGetRequestUsingFormUrlEncoding(restEndPointUrl + GET_CLIENTS, authToken)
+            .flatMap(clientService::executeJsonRequest)
+            .filter(apiSerializer::getIsSuccess)
+            .flatMap(clientObjects -> contentHelper.getArrayFrom(clientObjects, "Clients"))
+            .flatMap(apiSerializer::getClientIdNamePairs);
     }
 
     // </editor-fold>

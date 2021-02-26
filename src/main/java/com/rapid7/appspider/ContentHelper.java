@@ -212,6 +212,11 @@ public class ContentHelper {
                 : Optional.empty();
     }
     private void logResponseFailure(String introduction, HttpResponse response) {
+        if (response == null) {
+            logger.severe("Response is null");
+            return;
+        }
+
         JSONObject error = asJson(response.getEntity()).orElse(new JSONObject());
         try {
             final String errorMessage = error.getString("ErrorMessage");

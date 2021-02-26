@@ -4,10 +4,12 @@
 
 package com.rapid7.appspider;
 
+import com.rapid7.appspider.datatransferobjects.ClientIdNamePair;
 import com.rapid7.appspider.datatransferobjects.ScanResult;
 
 import java.io.InputStream;
 import java.net.URL;
+import java.util.List;
 import java.util.Optional;
 
 public interface EnterpriseClient {
@@ -117,4 +119,12 @@ public interface EnterpriseClient {
      * @return Optional containing InputStream on success; otherwise, Optional.empty()
      */
     Optional<InputStream> getReportZip(String authToken, String scanId);
+
+    /**
+     * gets an array of all name/id pairs of clients that the authorized user can access
+     * @param authToken authorization token required to execute request
+     * @return array of ClientIdNamePair objects representing the id's and names 
+     *         of accessible clients
+     */
+    Optional<List<ClientIdNamePair>> getClientNameIdPairs(String authToken);
 }

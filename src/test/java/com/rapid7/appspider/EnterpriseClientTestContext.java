@@ -39,6 +39,7 @@ public class EnterpriseClientTestContext implements AutoCloseable {
     private static final String SAVE_CONFIG = "/Config/SaveConfig";
     private static final String GET_VULNERABILITIES_SUMMARY = "/Report/GetVulnerabilitiesSummaryXml";
     private static final String GET_REPORT_ZIP = "/Report/GetReportZip";
+    private static final String GET_CLIENTS = "/Config/GetClients";
 
     private final LoggerFacade mockLogger;
     private final ContentHelper mockContentHelper;
@@ -48,6 +49,8 @@ public class EnterpriseClientTestContext implements AutoCloseable {
     private String expectedAuthToken;
     private String configId;
     private String configName;
+    private String clientId;
+    private String clientName;
     private String expectedScanId;
     private EnterpriseClient enterpriseClient;
     private String url;
@@ -62,8 +65,10 @@ public class EnterpriseClientTestContext implements AutoCloseable {
         mockApiSerializer = new ApiSerializer(mockLogger);
         expectedAuthToken = ""; // set by isSuccess state of each test, just being reset here
         expectedScanId = "";
-        configId = UUID.randomUUID().toString();
-        configName = "ConfigName:" + UUID.randomUUID().toString();
+        configId =  "3249E3F6-3B33-4D4E-93EB-2F464AB424A8";
+        configName = "ConfigName:3249E3F6+3B33+4D4E+93EB+2F464AB424A8";
+        clientId =  "B54963EE-C60A-443D-B352-2B5BDAB8B2BC";
+        clientName = "Rapid7:B54963EE+C60A+443D+B352+2B5BDAB8B2BC";
         mockHttpClient = mock(HttpClient.class);
         engineGroupDetails = new ArrayList<>();
 
@@ -224,6 +229,12 @@ public class EnterpriseClientTestContext implements AutoCloseable {
         when(mockHttpClient.execute(argThat(getRequest))).thenReturn(response);
         return this;
     }
+    public EnterpriseClientTestContext configureGetClientIdNamePairs(boolean isSuccess) throws IOException {
+        ArgumentMatcher<HttpRequestBase> getConfigsRequest = request -> request instanceof HttpGet &&  request.getURI().toString().equals(url + GET_CLIENTS);
+        HttpResponse response = getJsonArrayResponseWithSuccess(isSuccess, "Clients", getJsonFromEntries(getEntryFrom("ClientId", clientId), getEntryFrom("ClientName", clientName)));
+        when(mockHttpClient.execute(argThat(getConfigsRequest))).thenReturn(response);
+        return this;
+    }
 
     private static HttpResponse getAuthenticationResult(boolean isSuccess, String token) {
         return getMockJsonResponseFromEntries(isSuccess, getEntryFrom("IsSuccess", isSuccess ? "true" : "false"), getEntryFrom("Token", token));
@@ -231,6 +242,18 @@ public class EnterpriseClientTestContext implements AutoCloseable {
     @SafeVarargs
     private static HttpResponse getJsonArrayResponse(boolean isSuccess, String key, JSONObject... objects) {
         return getJsonArrayResponse(isSuccess, key, Arrays.asList(objects));
+    }
+    @SafeVarargs
+    private static HttpResponse getJsonArrayResponseWithSuccess(boolean isSuccess, String key, JSONObject... objects) {
+        return getJsonArrayResponseWithSuccess(isSuccess, key, Arrays.asList(objects));
+    }
+    private static HttpResponse getJsonArrayResponseWithSuccess(boolean isSuccess, String key, List<JSONObject> objects) {
+        JSONArray jsonArray = new JSONArray();
+        objects.forEach(jsonArray::put);
+        return getMockJsonResponseFromEntries(
+            isSuccess, 
+            getEntryFrom(key, jsonArray), 
+            getEntryFrom("IsSuccess", isSuccess));
     }
     private static HttpResponse getJsonArrayResponse(boolean isSuccess, String key, List<JSONObject> objects) {
         JSONArray jsonArray = new JSONArray();

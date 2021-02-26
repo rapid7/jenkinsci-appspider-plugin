@@ -1,5 +1,6 @@
 package com.rapid7.appspider;
 
+import com.rapid7.appspider.datatransferobjects.ClientIdNamePair;
 import com.rapid7.appspider.datatransferobjects.ScanResult;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,112 +30,94 @@ class EnterpriseRestClientTest {
 
     @Test
     void testAuthenticationReturnsTrueWhenCredentialsAreValid() throws IOException {
-        context
-            .arrangeExpectedValues(true)
-            .configureLogin(true)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues(true).configureLogin(true).configureEnterpriseClient();
 
         assertTrue(context.getEnterpriseClient().testAuthentication("wolf359", "pa55word"));
     }
+
     @Test
     void testAuthenticationReturnsFalseWhenCredentialsAreInvalid() throws IOException {
-        context
-            .arrangeExpectedValues(false)
-            .configureLogin(false)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues(false).configureLogin(false).configureEnterpriseClient();
 
         // act and assert
         assertFalse(context.getEnterpriseClient().testAuthentication("wolf359", "pa55word"));
     }
+
     @Test
     void loginHasTokenWhenCredentialsAreValid() throws IOException {
-        context
-            .arrangeExpectedValues(true)
-            .configureLogin(true)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues(true).configureLogin(true).configureEnterpriseClient();
         assertTrue(context.getEnterpriseClient().login("wolf359", "pa55word").isPresent());
     }
+
     @Test
     void loginTokenHasExpectedValueWhenCredentialsAreValid() throws IOException {
-        context
-            .arrangeExpectedValues(true)
-            .configureLogin(true)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues(true).configureLogin(true).configureEnterpriseClient();
         Optional<String> actualToken = context.getEnterpriseClient().login("wolf359", "pa55word");
         assertEquals(context.getExpectedAuthToken(), actualToken.get());
     }
+
     @Test
     void loginTokenNotPresentWhenCredentialsAreInvalid() throws IOException {
-        context
-            .arrangeExpectedValues(false)
-            .configureLogin(false)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues(false).configureLogin(false).configureEnterpriseClient();
         assertFalse(context.getEnterpriseClient().login("wolf359", "pa55word").isPresent());
     }
 
     @Test
     void getEngineGroupIdForNameIsPresentWhenNameIsFound() throws IOException {
-        context
-                .arrangeExpectedValues()
-                .configureGetAllEngineGroups(true)
-                .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureGetAllEngineGroups(true).configureEnterpriseClient();
 
-        Optional<String> engineId = context.getEnterpriseClient().getEngineGroupIdFromName(context.getExpectedAuthToken(), context.getFirstEngineName());
+        Optional<String> engineId = context.getEnterpriseClient()
+                .getEngineGroupIdFromName(context.getExpectedAuthToken(), context.getFirstEngineName());
 
         assertTrue(engineId.isPresent());
     }
+
     @Test
     void getEngineGroupIdForNameCorrectResultReturnedWhenNameIsFound() throws IOException {
-        context
-                .arrangeExpectedValues()
-                .configureGetAllEngineGroups(true)
-                .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureGetAllEngineGroups(true).configureEnterpriseClient();
 
-        Optional<String> engineId = context.getEnterpriseClient().getEngineGroupIdFromName(context.getExpectedAuthToken(), context.getFirstEngineName());
+        Optional<String> engineId = context.getEnterpriseClient()
+                .getEngineGroupIdFromName(context.getExpectedAuthToken(), context.getFirstEngineName());
 
         assertEquals(context.getFirstEngineId(), engineId.get());
     }
+
     @Test
     void getEngineGroupIdForNameIsNotPresentWhenNameIsNotFound() throws IOException {
-        context
-                .arrangeExpectedValues()
-                .configureGetAllEngineGroups(true)
-                .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureGetAllEngineGroups(true).configureEnterpriseClient();
 
-        Optional<String> engineId = context.getEnterpriseClient().getEngineGroupIdFromName(context.getExpectedAuthToken(), "nameNotFound");
+        Optional<String> engineId = context.getEnterpriseClient()
+                .getEngineGroupIdFromName(context.getExpectedAuthToken(), "nameNotFound");
 
         assertFalse(engineId.isPresent());
     }
+
     @Test
     void getEngineGroupIdForNameIsNotPresentWhenApiCallFails() throws IOException {
-        context
-                .arrangeExpectedValues()
-                .configureGetAllEngineGroups(false)
-                .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureGetAllEngineGroups(false).configureEnterpriseClient();
 
-        Optional<String> engineId = context.getEnterpriseClient().getEngineGroupIdFromName(context.getExpectedAuthToken(), context.getFirstEngineName());
+        Optional<String> engineId = context.getEnterpriseClient()
+                .getEngineGroupIdFromName(context.getExpectedAuthToken(), context.getFirstEngineName());
 
         assertFalse(engineId.isPresent());
     }
+
     @Test
     void getEngineGroupNamesForClientIsPresent() throws IOException {
-        context
-                .arrangeExpectedValues()
-                .configureGetEngineGroupsForClient(true)
-                .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureGetEngineGroupsForClient(true).configureEnterpriseClient();
 
-        Optional<String[]> engineGroupNames = context.getEnterpriseClient().getEngineGroupNamesForClient(context.getExpectedAuthToken());
+        Optional<String[]> engineGroupNames = context.getEnterpriseClient()
+                .getEngineGroupNamesForClient(context.getExpectedAuthToken());
 
         assertTrue(engineGroupNames.isPresent());
     }
+
     @Test
     void getEngineGroupNamesForClientCorrectResultReturned() throws IOException {
-        context
-                .arrangeExpectedValues()
-                .configureGetEngineGroupsForClient(true)
-                .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureGetEngineGroupsForClient(true).configureEnterpriseClient();
 
-        Optional<String[]> engineGroupNames = context.getEnterpriseClient().getEngineGroupNamesForClient(context.getExpectedAuthToken());
+        Optional<String[]> engineGroupNames = context.getEnterpriseClient()
+                .getEngineGroupNamesForClient(context.getExpectedAuthToken());
 
         List<String> expected = Arrays.asList(context.getEngineGroupNames());
         List<String> actual = Arrays.asList(engineGroupNames.get());
@@ -142,182 +125,162 @@ class EnterpriseRestClientTest {
         Collections.sort(actual);
         assertArrayEquals(expected.toArray(), actual.toArray());
     }
+
     @Test
     void getEngineGroupNamesForClientIsNotPresentWhenApiCallFails() throws IOException {
-        context
-                .arrangeExpectedValues()
-                .configureGetEngineGroupsForClient(false)
-                .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureGetEngineGroupsForClient(false).configureEnterpriseClient();
 
-        Optional<String[]> engineGroupNames = context.getEnterpriseClient().getEngineGroupNamesForClient(context.getExpectedAuthToken());
+        Optional<String[]> engineGroupNames = context.getEnterpriseClient()
+                .getEngineGroupNamesForClient(context.getExpectedAuthToken());
 
         assertFalse(engineGroupNames.isPresent());
     }
 
     @Test
     void runScanConfigByNameIsSuccessWhenConfigFoundAndScanCreated() throws IOException {
-        context
-            .arrangeExpectedValues()
-            .configureGetConfigs(true)
-            .configureRunScanByConfigId(true)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureGetConfigs(true).configureRunScanByConfigId(true)
+                .configureEnterpriseClient();
 
-        ScanResult scanResult = context.getEnterpriseClient().runScanByConfigName(context.getExpectedAuthToken(), context.getConfigName());
+        ScanResult scanResult = context.getEnterpriseClient().runScanByConfigName(context.getExpectedAuthToken(),
+                context.getConfigName());
 
         assertTrue(scanResult.isSuccess());
     }
+
     @Test
     void runScanConfigByNameHasScanIdWhenConfigFoundAndScanCreated() throws IOException {
-        context
-            .arrangeExpectedValues(true)
-            .configureGetConfigs(true)
-            .configureRunScanByConfigId(true)
-            .configureEnterpriseClient();
-        ScanResult scanResult = context.getEnterpriseClient().runScanByConfigName(context.getExpectedAuthToken(), context.getConfigName());
+        context.arrangeExpectedValues(true).configureGetConfigs(true).configureRunScanByConfigId(true)
+                .configureEnterpriseClient();
+        ScanResult scanResult = context.getEnterpriseClient().runScanByConfigName(context.getExpectedAuthToken(),
+                context.getConfigName());
 
         assertEquals(context.getExpectedScanId(), scanResult.getScanId());
     }
+
     @Test
     void runScanConfigByNameIsFailWhenConfigNotFound() throws IOException {
-        context
-                .arrangeExpectedValues(true)
-                .configureGetConfigs(false)
-                .configureRunScanByConfigId(true)
+        context.arrangeExpectedValues(true).configureGetConfigs(false).configureRunScanByConfigId(true)
                 .configureEnterpriseClient();
 
-        ScanResult scanResult = context.getEnterpriseClient().runScanByConfigName(context.getExpectedAuthToken(), context.getConfigName());
+        ScanResult scanResult = context.getEnterpriseClient().runScanByConfigName(context.getExpectedAuthToken(),
+                context.getConfigName());
 
         assertFalse(scanResult.isSuccess());
     }
+
     @Test
     void runScanConfigByNameIsFailWhenConfigFoundButRunFails() throws IOException {
-        context
-            .arrangeExpectedValues(true)
-            .configureGetConfigs(true)
-            .configureRunScanByConfigId(false)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues(true).configureGetConfigs(true).configureRunScanByConfigId(false)
+                .configureEnterpriseClient();
 
-        ScanResult scanResult = context.getEnterpriseClient().runScanByConfigName(context.getExpectedAuthToken(), context.getConfigName());
+        ScanResult scanResult = context.getEnterpriseClient().runScanByConfigName(context.getExpectedAuthToken(),
+                context.getConfigName());
 
         assertFalse(scanResult.isSuccess());
     }
+
     @Test
     void getScanStatusIsPresentWhenApiCallSuceeds() throws IOException {
-        context
-            .arrangeExpectedValues()
-            .configureGetScanStatus(true)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureGetScanStatus(true).configureEnterpriseClient();
 
-        Optional<String> status = context.getEnterpriseClient().getScanStatus(context.getExpectedAuthToken(), context.getExpectedScanId());
+        Optional<String> status = context.getEnterpriseClient().getScanStatus(context.getExpectedAuthToken(),
+                context.getExpectedScanId());
 
         assertTrue(status.isPresent());
     }
+
     @Test
     void isScanFinishedIsTrueWhenResultAndIsSuccessAreTrue() throws IOException {
-        context
-            .arrangeExpectedValues()
-            .configureIsScanFinished(true, true, true)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureIsScanFinished(true, true, true).configureEnterpriseClient();
 
-        boolean isFinished = context.getEnterpriseClient().isScanFinished(context.getExpectedAuthToken(), context.getExpectedScanId());
+        boolean isFinished = context.getEnterpriseClient().isScanFinished(context.getExpectedAuthToken(),
+                context.getExpectedScanId());
 
         assertTrue(isFinished);
     }
+
     @Test
     void isScanFinishedIsFalseWhenResultIsFalseAndIsSuccessIsTrue() throws IOException {
-        context
-            .arrangeExpectedValues()
-            .configureIsScanFinished(true, true, false)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureIsScanFinished(true, true, false).configureEnterpriseClient();
 
-        boolean isFinished = context.getEnterpriseClient().isScanFinished(context.getExpectedAuthToken(), context.getExpectedScanId());
+        boolean isFinished = context.getEnterpriseClient().isScanFinished(context.getExpectedAuthToken(),
+                context.getExpectedScanId());
 
         assertFalse(isFinished);
     }
+
     @Test
     void isScanFinishedIsFalseWhenResultIsTrueAndIsSuccessIsFalse() throws IOException {
-        context
-            .arrangeExpectedValues()
-            .configureIsScanFinished(true, false, true)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureIsScanFinished(true, false, true).configureEnterpriseClient();
 
-        boolean isFinished = context.getEnterpriseClient().isScanFinished(context.getExpectedAuthToken(), context.getExpectedScanId());
+        boolean isFinished = context.getEnterpriseClient().isScanFinished(context.getExpectedAuthToken(),
+                context.getExpectedScanId());
 
         assertFalse(isFinished);
     }
+
     @Test
     void isScanFinishedIsFalseWhenApiCallFails() throws IOException {
-        context
-            .arrangeExpectedValues()
-            .configureIsScanFinished(false, true, true)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureIsScanFinished(false, true, true).configureEnterpriseClient();
 
-        boolean isFinished = context.getEnterpriseClient().isScanFinished(context.getExpectedAuthToken(), context.getExpectedScanId());
+        boolean isFinished = context.getEnterpriseClient().isScanFinished(context.getExpectedAuthToken(),
+                context.getExpectedScanId());
 
         assertFalse(isFinished);
     }
+
     @Test
     void hasReportIsTrueWhenResultAndIsSuccessAreTrue() throws IOException {
-        context
-            .arrangeExpectedValues()
-            .configureHasReport(true, true, true)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureHasReport(true, true, true).configureEnterpriseClient();
 
-        boolean isFinished = context.getEnterpriseClient().hasReport(context.getExpectedAuthToken(), context.getExpectedScanId());
+        boolean isFinished = context.getEnterpriseClient().hasReport(context.getExpectedAuthToken(),
+                context.getExpectedScanId());
 
         assertTrue(isFinished);
     }
+
     @Test
     void hasReportIsFalseWhenResultIsFalseAndIsSuccessIsTrue() throws IOException {
-        context
-            .arrangeExpectedValues()
-            .configureHasReport(true, true, false)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureHasReport(true, true, false).configureEnterpriseClient();
 
-        boolean hasReport = context.getEnterpriseClient().hasReport(context.getExpectedAuthToken(), context.getExpectedScanId());
+        boolean hasReport = context.getEnterpriseClient().hasReport(context.getExpectedAuthToken(),
+                context.getExpectedScanId());
 
         assertFalse(hasReport);
     }
+
     @Test
     void hasReportIsFalseWhenResultIsTrueAndIsSuccessIsFalse() throws IOException {
-        context
-            .arrangeExpectedValues()
-            .configureHasReport(true, false, true)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureHasReport(true, false, true).configureEnterpriseClient();
 
-        boolean hasReport = context.getEnterpriseClient().hasReport(context.getExpectedAuthToken(), context.getExpectedScanId());
+        boolean hasReport = context.getEnterpriseClient().hasReport(context.getExpectedAuthToken(),
+                context.getExpectedScanId());
 
         assertFalse(hasReport);
     }
+
     @Test
     void hasReportIsFalseWhenApiCallFails() throws IOException {
-        context
-            .arrangeExpectedValues()
-            .configureHasReport(false, true, true)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureHasReport(false, true, true).configureEnterpriseClient();
 
-        boolean hasReport = context.getEnterpriseClient().hasReport(context.getExpectedAuthToken(), context.getExpectedScanId());
+        boolean hasReport = context.getEnterpriseClient().hasReport(context.getExpectedAuthToken(),
+                context.getExpectedScanId());
 
         assertFalse(hasReport);
     }
 
     @Test
     void getConfigsIsPresentWhenApiCallSucceeds() throws IOException {
-        context
-            .arrangeExpectedValues()
-            .configureGetConfigs(true)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureGetConfigs(true).configureEnterpriseClient();
 
         Optional<String[]> configs = context.getEnterpriseClient().getConfigNames(context.getExpectedAuthToken());
 
         assertTrue(configs.isPresent());
     }
+
     @Test
     void getConfigsIsNotPresentWhenApiCallFails() throws IOException {
-        context
-            .arrangeExpectedValues()
-            .configureGetConfigs(false)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureGetConfigs(false).configureEnterpriseClient();
 
         Optional<String[]> configs = context.getEnterpriseClient().getConfigNames(context.getExpectedAuthToken());
 
@@ -326,15 +289,10 @@ class EnterpriseRestClientTest {
 
     @Test
     void saveConfigIsTrueWhenResultIsSuccess() throws IOException {
-        context
-            .arrangeExpectedValues()
-            .configureSaveConfig(true, true)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureSaveConfig(true, true).configureEnterpriseClient();
 
-        boolean saved = context.getEnterpriseClient().saveConfig(
-                context.getExpectedAuthToken(),
-                "name" + UUID.randomUUID().toString(),
-                new URL("http://www.webscantest.com"),
+        boolean saved = context.getEnterpriseClient().saveConfig(context.getExpectedAuthToken(),
+                "name" + UUID.randomUUID().toString(), new URL("http://www.webscantest.com"),
                 "engine" + UUID.randomUUID().toString());
 
         assertTrue(saved);
@@ -342,30 +300,21 @@ class EnterpriseRestClientTest {
 
     @Test
     void saveConfigIsFalseWhenResultIsFail() throws IOException {
-        context
-            .arrangeExpectedValues()
-            .configureSaveConfig(true, false)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureSaveConfig(true, false).configureEnterpriseClient();
 
-        boolean saved = context.getEnterpriseClient().saveConfig(
-                context.getExpectedAuthToken(),
-                "name" + UUID.randomUUID().toString(),
-                new URL("http://www.webscantest.com"),
+        boolean saved = context.getEnterpriseClient().saveConfig(context.getExpectedAuthToken(),
+                "name" + UUID.randomUUID().toString(), new URL("http://www.webscantest.com"),
                 "engine" + UUID.randomUUID().toString());
 
         assertFalse(saved);
     }
+
     @Test
     void saveConfigIsFalseWhenApiCallFails() throws IOException {
-        context
-            .arrangeExpectedValues()
-            .configureSaveConfig(false, true)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureSaveConfig(false, true).configureEnterpriseClient();
 
-        boolean saved = context.getEnterpriseClient().saveConfig(
-                context.getExpectedAuthToken(),
-                "name" + UUID.randomUUID().toString(),
-                new URL("http://www.webscantest.com"),
+        boolean saved = context.getEnterpriseClient().saveConfig(context.getExpectedAuthToken(),
+                "name" + UUID.randomUUID().toString(), new URL("http://www.webscantest.com"),
                 "engine" + UUID.randomUUID().toString());
 
         assertFalse(saved);
@@ -374,24 +323,21 @@ class EnterpriseRestClientTest {
     @Test
     void getVulnerabilitySummaryXmlIsPresentWhenSuccessful() throws IOException {
         String xml = String.format("<?xml><vulns id=\"%s\"></vulns>", UUID.randomUUID());
-        context
-            .arrangeExpectedValues()
-            .configureGetVulnerabilitiesSummaryXml(true, xml)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureGetVulnerabilitiesSummaryXml(true, xml).configureEnterpriseClient();
 
-        Optional<String> actualXml = context.getEnterpriseClient().getVulnerabilitiesSummaryXml(context.getExpectedAuthToken(), context.getExpectedScanId());
+        Optional<String> actualXml = context.getEnterpriseClient()
+                .getVulnerabilitiesSummaryXml(context.getExpectedAuthToken(), context.getExpectedScanId());
 
         assertTrue(actualXml.isPresent());
     }
+
     @Test
     void getVulnerabilitySummaryXmlCorrectResponseWhenSuccessful() throws IOException {
         String xml = String.format("<?xml><vulns id=\"%s\"></vulns>", UUID.randomUUID());
-        context
-                .arrangeExpectedValues()
-                .configureGetVulnerabilitiesSummaryXml(true, xml)
-                .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureGetVulnerabilitiesSummaryXml(true, xml).configureEnterpriseClient();
 
-        Optional<String> actualXml = context.getEnterpriseClient().getVulnerabilitiesSummaryXml(context.getExpectedAuthToken(), context.getExpectedScanId());
+        Optional<String> actualXml = context.getEnterpriseClient()
+                .getVulnerabilitiesSummaryXml(context.getExpectedAuthToken(), context.getExpectedScanId());
 
         assertEquals(xml, actualXml.orElse("wrong"));
     }
@@ -399,12 +345,10 @@ class EnterpriseRestClientTest {
     @Test
     void getVulnerabilitySummaryXmlIsNotPresentWhenFails() throws IOException {
         String xml = String.format("<?xml><vulns id=\"%s\"></vulns>", UUID.randomUUID());
-        context
-                .arrangeExpectedValues()
-                .configureGetVulnerabilitiesSummaryXml(false, xml)
-                .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureGetVulnerabilitiesSummaryXml(false, xml).configureEnterpriseClient();
 
-        Optional<String> actualXml = context.getEnterpriseClient().getVulnerabilitiesSummaryXml(context.getExpectedAuthToken(), context.getExpectedScanId());
+        Optional<String> actualXml = context.getEnterpriseClient()
+                .getVulnerabilitiesSummaryXml(context.getExpectedAuthToken(), context.getExpectedScanId());
 
         assertFalse(actualXml.isPresent());
     }
@@ -413,26 +357,23 @@ class EnterpriseRestClientTest {
     void getReportZipIsPresentWhenSuccessful() throws IOException {
         String content = UUID.randomUUID().toString();
         byte[] encodedContent = Base64.getEncoder().encode(content.getBytes());
-        context
-            .arrangeExpectedValues()
-            .configureGetReportZip(true, encodedContent)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureGetReportZip(true, encodedContent).configureEnterpriseClient();
 
-        Optional<InputStream> inputStream = context.getEnterpriseClient().getReportZip(context.getExpectedAuthToken(), context.getExpectedScanId());
+        Optional<InputStream> inputStream = context.getEnterpriseClient().getReportZip(context.getExpectedAuthToken(),
+                context.getExpectedScanId());
 
         assertTrue(inputStream.isPresent());
         inputStream.get().close();
     }
+
     @Test
     void getReportZipCorrectResultValueSuccessful() throws IOException {
         String content = UUID.randomUUID().toString();
         byte[] encodedContent = Base64.getEncoder().encode(content.getBytes());
-        context
-            .arrangeExpectedValues()
-            .configureGetReportZip(true, encodedContent)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureGetReportZip(true, encodedContent).configureEnterpriseClient();
 
-        Optional<InputStream> maybeInputStream = context.getEnterpriseClient().getReportZip(context.getExpectedAuthToken(), context.getExpectedScanId());
+        Optional<InputStream> maybeInputStream = context.getEnterpriseClient()
+                .getReportZip(context.getExpectedAuthToken(), context.getExpectedScanId());
         try (InputStream inputStream = maybeInputStream.orElseThrow(() -> new RuntimeException("test failure"))) {
             byte[] encodedResponse = new byte[inputStream.available()];
 
@@ -441,18 +382,46 @@ class EnterpriseRestClientTest {
             assertEquals(content, decoded);
         }
     }
+
     @Test
     void getReportZipIsNotPresentWhenFails() throws IOException {
         String content = UUID.randomUUID().toString();
         byte[] encodedContent = Base64.getEncoder().encode(content.getBytes());
-        context
-            .arrangeExpectedValues()
-            .configureGetReportZip(false, encodedContent)
-            .configureEnterpriseClient();
+        context.arrangeExpectedValues().configureGetReportZip(false, encodedContent).configureEnterpriseClient();
 
-        Optional<InputStream> inputStream = context.getEnterpriseClient().getReportZip(context.getExpectedAuthToken(), context.getExpectedScanId());
+        Optional<InputStream> inputStream = context.getEnterpriseClient().getReportZip(context.getExpectedAuthToken(),
+                context.getExpectedScanId());
 
         assertFalse(inputStream.isPresent());
     }
 
+    @Test
+    void getClientIdNamePairsIsPresentWhenSuccessful() throws IOException {
+        context
+            .arrangeExpectedValues()
+            .configureGetClientIdNamePairs(true)
+            .configureEnterpriseClient();
+
+        Optional<List<ClientIdNamePair>> configs = context
+            .getEnterpriseClient()
+            .getClientNameIdPairs(context.getExpectedAuthToken());
+
+        assertTrue(configs.isPresent());
+
+    }
+
+    @Test
+    void getClientIdNamePairsIsNotPresentWhenFail() throws IOException {
+        context
+            .arrangeExpectedValues()
+            .configureGetClientIdNamePairs(false)
+            .configureEnterpriseClient();
+
+        Optional<List<ClientIdNamePair>> configs = context
+            .getEnterpriseClient()
+            .getClientNameIdPairs(context.getExpectedAuthToken());
+
+        assertFalse(configs.isPresent());
+
+    }
 }

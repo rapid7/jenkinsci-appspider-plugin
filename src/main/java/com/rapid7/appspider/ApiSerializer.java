@@ -4,6 +4,7 @@
 
 package com.rapid7.appspider;
 
+import com.rapid7.appspider.datatransferobjects.ClientIdNamePair;
 import com.rapid7.appspider.datatransferobjects.ScanResult;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
@@ -228,4 +229,30 @@ public class ApiSerializer {
                 .allMatch(jsonObject::getBoolean));
     }
 
+    /**
+     * returns a list of ClientIdNamePair objects extracted from given JSONArray
+     * @param clients JSONArray containing items with format { ClientId = String, ClientName = String }
+     * @return on success list of ClientIdNamePairs extracted from clients; otherwise, Optional.empty()
+     */
+    public Optional<List<ClientIdNamePair>> getClientIdNamePairs(JSONArray clients) {
+        if (Objects.isNull(clients))
+            return Optional.empty();
+        List<ClientIdNamePair> pairs = new ArrayList<>();
+        for (Object object : clients) {
+            if ((object instanceof JSONObject)) {
+                JSONObject client = (JSONObject) object;
+                try {
+                    String id = client.getString("ClientId");
+                    String name = client.getString("ClientName");
+                    if (Objects.isNull(id) || id.isEmpty() || Objects.isNull(name) || name.isEmpty())
+                        continue;
+
+                    pairs.add(new ClientIdNamePair(id, name));
+                } catch (JSONException e) {
+                    logger.severe(e.toString());
+                }
+            }
+        }
+        return Optional.of(pairs);
+    }
 }
