@@ -1,5 +1,5 @@
 /*
- * Copyright © 2003 - 2020 Rapid7, Inc.  All rights reserved.
+ * Copyright © 2003 - 2021 Rapid7, Inc.  All rights reserved.
  */
 
 package com.rapid7.appspider;

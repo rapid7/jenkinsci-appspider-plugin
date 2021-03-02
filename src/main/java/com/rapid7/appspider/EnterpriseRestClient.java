@@ -6,10 +6,14 @@ package com.rapid7.appspider;
 
 import com.rapid7.appspider.datatransferobjects.ClientIdNamePair;
 import com.rapid7.appspider.datatransferobjects.ScanResult;
+import com.rapid7.appspider.models.AuthenticationModel;
 
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
+
+import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicNameValuePair;
+import org.jfree.util.Log;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -79,21 +83,28 @@ public final class EnterpriseRestClient implements EnterpriseClient {
      * {@inheritDoc}
      */
     @Override
-    public Optional<String> login(String username, String password) {
-        String endPoint = restEndPointUrl + AUTHENTICATION_LOGIN;
+    public Optional<String> login(AuthenticationModel authModel) {
+        final String endPoint = restEndPointUrl + AUTHENTICATION_LOGIN;
 
-        if (Objects.isNull(username) || username.isEmpty())
-            throw new IllegalArgumentException("username cannot be null or empty");
-        if (Objects.isNull(password) || password.isEmpty())
-            throw new IllegalArgumentException("password cannot be null or empty");
+        if (authModel == null) {
+            throw new IllegalArgumentException();
+        }
+
+        Log.info("name: " + authModel.getUsername());
+        Log.info("pass: " + authModel.getPassword());
+        Log.info("had id: " + authModel.hasClientId());
 
         try {
+            final StringEntity contentEntity = authModel.hasClientId()
+                ? contentHelper.entityFrom(
+                    contentHelper.pairFrom("name", authModel.getUsername()), 
+                    contentHelper.pairFrom("password", authModel.getPassword()),
+                    contentHelper.pairFrom("clientId", authModel.getClientId()))
+                : contentHelper.entityFrom(
+                    contentHelper.pairFrom("name", authModel.getUsername()), 
+                    contentHelper.pairFrom("password", authModel.getPassword()));
             return clientService
-                .buildPostRequestUsingApplicationJson(
-                    endPoint,
-                    contentHelper.entityFrom(
-                            contentHelper.pairFrom("name", username),
-                            contentHelper.pairFrom("password", password)))
+                .buildPostRequestUsingApplicationJson(endPoint, contentEntity)
                 .flatMap(request -> clientService.executeJsonRequest(request)
                 .flatMap(apiSerializer::getTokenOrEmpty));
         } catch (UnsupportedEncodingException | JSONException e) {
@@ -106,8 +117,8 @@ public final class EnterpriseRestClient implements EnterpriseClient {
      * {@inheritDoc}
      */
     @Override
-    public boolean testAuthentication(String username, String password) {
-        return login(username, password).isPresent();
+    public boolean testAuthentication(AuthenticationModel authModel) {
+        return login(authModel).isPresent();
     }
 
     // <editor-fold desc="Engine Group APIs">

@@ -2,6 +2,8 @@ package com.rapid7.appspider;
 
 import com.rapid7.appspider.datatransferobjects.ClientIdNamePair;
 import com.rapid7.appspider.datatransferobjects.ScanResult;
+import com.rapid7.appspider.models.AuthenticationModel;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,8 +33,7 @@ class EnterpriseRestClientTest {
     @Test
     void testAuthenticationReturnsTrueWhenCredentialsAreValid() throws IOException {
         context.arrangeExpectedValues(true).configureLogin(true).configureEnterpriseClient();
-
-        assertTrue(context.getEnterpriseClient().testAuthentication("wolf359", "pa55word"));
+        assertTrue(context.getEnterpriseClient().testAuthentication(new AuthenticationModel("wolf359", "pa55word")));
     }
 
     @Test
@@ -40,26 +41,26 @@ class EnterpriseRestClientTest {
         context.arrangeExpectedValues(false).configureLogin(false).configureEnterpriseClient();
 
         // act and assert
-        assertFalse(context.getEnterpriseClient().testAuthentication("wolf359", "pa55word"));
+        assertFalse(context.getEnterpriseClient().testAuthentication(new AuthenticationModel("wolf359", "pa55word")));
     }
 
     @Test
     void loginHasTokenWhenCredentialsAreValid() throws IOException {
         context.arrangeExpectedValues(true).configureLogin(true).configureEnterpriseClient();
-        assertTrue(context.getEnterpriseClient().login("wolf359", "pa55word").isPresent());
+        assertTrue(context.getEnterpriseClient().login(new AuthenticationModel("wolf359", "pa55word")).isPresent());
     }
 
     @Test
     void loginTokenHasExpectedValueWhenCredentialsAreValid() throws IOException {
         context.arrangeExpectedValues(true).configureLogin(true).configureEnterpriseClient();
-        Optional<String> actualToken = context.getEnterpriseClient().login("wolf359", "pa55word");
+        Optional<String> actualToken = context.getEnterpriseClient().login(new AuthenticationModel("wolf359", "pa55word"));
         assertEquals(context.getExpectedAuthToken(), actualToken.get());
     }
 
     @Test
     void loginTokenNotPresentWhenCredentialsAreInvalid() throws IOException {
         context.arrangeExpectedValues(false).configureLogin(false).configureEnterpriseClient();
-        assertFalse(context.getEnterpriseClient().login("wolf359", "pa55word").isPresent());
+        assertFalse(context.getEnterpriseClient().login(new AuthenticationModel("wolf359", "pa55word")).isPresent());
     }
 
     @Test
