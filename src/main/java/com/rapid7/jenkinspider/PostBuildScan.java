@@ -183,6 +183,7 @@ public class PostBuildScan extends Notifier {
         private String[] scanConfigNames;
         private String[] scanConfigEngines;
         private String appSpiderClientId;
+        private String appSpiderClientName;
         private Optional<Map<String, String>> clientIdToNames;
         private static final String INVALID_CREDENTIALS = "Invalid username / password combination";
 
@@ -271,6 +272,20 @@ public class PostBuildScan extends Notifier {
             this.appSpiderClientId = appSpiderClientId;
         }
 
+        public String getAppSpiderClientName() {
+            return appSpiderClientName;
+        }
+
+        public void setAppSpiderClientName(String appSpiderClientName) {
+            this.appSpiderClientName = appSpiderClientName;
+            if (!this.clientIdToNames.isPresent())
+                return;
+            Map<String, String> idToNames = clientIdToNames.get();
+
+            String clientId = idToNames.getOrDefault(appSpiderClientName, "NOT-FOUND");
+            if (!clientId.equals("NOT-FOUND"))
+                setAppSpiderClientId(clientId);
+        }
 
         public AuthenticationModel buildAuthenticationModel() {
 
