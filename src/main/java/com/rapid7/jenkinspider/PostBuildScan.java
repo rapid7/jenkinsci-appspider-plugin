@@ -54,9 +54,9 @@ public class PostBuildScan extends Notifier {
     private final String scanConfigEngineGroupName;
 
     @DataBoundConstructor
-    @SuppressWarnings({"java:S107"})
-    public PostBuildScan(String clientName, String configName, String reportName, Boolean enableScan, Boolean generateReport,
-            String scanConfigName, String scanConfigUrl, String scanConfigEngineGroupName) {
+    @SuppressWarnings({ "java:S107" })
+    public PostBuildScan(String clientName, String configName, String reportName, Boolean enableScan,
+            Boolean generateReport, String scanConfigName, String scanConfigUrl, String scanConfigEngineGroupName) {
         this.clientName = clientName;
         this.configName = configName;
         this.reportName = reportName;
@@ -187,6 +187,7 @@ public class PostBuildScan extends Notifier {
         private String appSpiderUsername;
         private Secret appSpiderPassword;
         private boolean appSpiderAllowSelfSignedCertificate;
+        private boolean appSpiderEnableMultiClientOrSysAdmin;
         private String[] scanConfigNames;
         private String[] scanConfigEngines;
         private String appSpiderClientId;
@@ -262,6 +263,14 @@ public class PostBuildScan extends Notifier {
         public void setAppSpiderAllowSelfSignedCertificate(boolean appSpiderAllowSelfSignedCertificate) {
             this.appSpiderAllowSelfSignedCertificate = appSpiderAllowSelfSignedCertificate;
         }
+        public boolean isAppSpiderEnableMultiClientOrSysAdmin() {
+            return appSpiderEnableMultiClientOrSysAdmin;
+        }
+
+        public void setAppSpiderEnableMultiClientOrSysAdmin(boolean appSpiderAllowMultiClientOrSysAdmin) {
+            this.appSpiderEnableMultiClientOrSysAdmin = appSpiderAllowMultiClientOrSysAdmin;
+        }
+
 
         public String[] getScanConfigNames() {
             return scanConfigNames.clone();
@@ -294,7 +303,7 @@ public class PostBuildScan extends Notifier {
         }
 
         public AuthenticationModel buildAuthenticationModel() {
-            return appSpiderClientId != null && !appSpiderClientId.isEmpty()
+            return appSpiderClientId != null && !appSpiderClientId.isEmpty() && appSpiderEnableMultiClientOrSysAdmin
                 ? new AuthenticationModel(appSpiderUsername, Secret.toString(appSpiderPassword), Optional.of(appSpiderClientId))
                 : new AuthenticationModel(appSpiderUsername, Secret.toString(appSpiderPassword), Optional.empty());
         }
@@ -372,8 +381,9 @@ public class PostBuildScan extends Notifier {
          */
         public ListBoxModel doFillConfigNameItems(@QueryParameter String clientName) {
 
-            if (clientName == null || clientName.equals(CLIENT_NAME_PLACEHOLDER_TEXT) || !clientIdToNames.isPresent())
-                return new ListBoxModel();
+            if (clientName == null || clientName.equals(CLIENT_NAME_PLACEHOLDER_TEXT) || !clientIdToNames.isPresent()){
+                return buildListBoxModel("[Select an engine group name]", new String[0]);
+            }
 
             appSpiderClientId = "";
             if (clientIdToNames.get().containsKey(clientName)) {
@@ -409,7 +419,7 @@ public class PostBuildScan extends Notifier {
          * @param password Password used for authentication
          * @return FormValidation result of the credentials test
          */
-        public FormValidation doTestCredentials(@QueryParameter("appSpiderAllowSelfSignedCertificate") final boolean allowSelfSignedCertificate,
+        public FormValidation doTestCredentials(@QueryParameter("appSpiderAllowSelfSignedCertificate") final boolean allowSelfSignedCertificate,                                                
                                                 @QueryParameter("appSpiderEntUrl") final String appSpiderEntUrl,
                                                 @QueryParameter("appSpiderUsername") final String username,
                                                 @QueryParameter("appSpiderPassword") final Secret password) {
