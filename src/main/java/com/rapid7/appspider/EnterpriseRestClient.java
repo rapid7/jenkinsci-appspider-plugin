@@ -13,7 +13,6 @@ import freemarker.template.TemplateException;
 
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicNameValuePair;
-import org.jfree.util.Log;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -89,10 +88,6 @@ public final class EnterpriseRestClient implements EnterpriseClient {
         if (authModel == null) {
             throw new IllegalArgumentException();
         }
-
-        Log.info("name: " + authModel.getUsername());
-        Log.info("pass: " + authModel.getPassword());
-        Log.info("had id: " + authModel.hasClientId());
 
         try {
             final StringEntity contentEntity = authModel.hasClientId()
@@ -335,7 +330,7 @@ public final class EnterpriseRestClient implements EnterpriseClient {
     // </editor-fold>
 
     // <editor-fold desc="Config APIs">
-    private static final String GET_CLIENTS = "/Config/GetClients";
+    private static final String GET_CLIENTS = "/Client/GetClients";
 
     /**
      * {@inheritDoc}

@@ -39,7 +39,7 @@ public class EnterpriseClientTestContext implements AutoCloseable {
     private static final String SAVE_CONFIG = "/Config/SaveConfig";
     private static final String GET_VULNERABILITIES_SUMMARY = "/Report/GetVulnerabilitiesSummaryXml";
     private static final String GET_REPORT_ZIP = "/Report/GetReportZip";
-    private static final String GET_CLIENTS = "/Config/GetClients";
+    private static final String GET_CLIENTS = "/Client/GetClients";
 
     private final LoggerFacade mockLogger;
     private final ContentHelper mockContentHelper;

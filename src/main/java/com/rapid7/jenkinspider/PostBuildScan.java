@@ -41,6 +41,7 @@ import java.util.stream.Collectors;
  */
 public class PostBuildScan extends Notifier {
 
+    private String clientName; // Not set to final since it may change
     private final String configName; // Not set to final since it may change
     // if user decided to create a new scan config
 
@@ -53,8 +54,10 @@ public class PostBuildScan extends Notifier {
     private final String scanConfigEngineGroupName;
 
     @DataBoundConstructor
-    public PostBuildScan(String configName, String reportName, Boolean enableScan, Boolean generateReport,
+    @SuppressWarnings({"java:S107"})
+    public PostBuildScan(String clientName, String configName, String reportName, Boolean enableScan, Boolean generateReport,
             String scanConfigName, String scanConfigUrl, String scanConfigEngineGroupName) {
+        this.clientName = clientName;
         this.configName = configName;
         this.reportName = reportName;
         this.enableScan = enableScan;
@@ -72,6 +75,10 @@ public class PostBuildScan extends Notifier {
     /*
      * This will be used from the config.jelly
      */
+    public String getClientName() {
+        return clientName;
+    }
+
     public String getConfigName() {
         return configName;
     }
@@ -278,26 +285,18 @@ public class PostBuildScan extends Notifier {
 
         public void setAppSpiderClientName(String appSpiderClientName) {
             this.appSpiderClientName = appSpiderClientName;
-            if (!this.clientIdToNames.isPresent())
+            if (!this.clientIdToNames.isPresent()) 
                 return;
             Map<String, String> idToNames = clientIdToNames.get();
-
             String clientId = idToNames.getOrDefault(appSpiderClientName, "NOT-FOUND");
             if (!clientId.equals("NOT-FOUND"))
                 setAppSpiderClientId(clientId);
         }
 
         public AuthenticationModel buildAuthenticationModel() {
-
-            /*
-            Optional<String> clientId = appSpiderClientId == null || appSpiderClientId.isEmpty()
-                ? Optional.of(appSpiderClientId)
-                : Optional.empty();
-            */
-
-            //return new AuthenticationModel(appSpiderUsername, Secret.toString(appSpiderPassword), clientId);
-            return new AuthenticationModel(appSpiderUsername, Secret.toString(appSpiderPassword), Optional.empty());
-
+            return appSpiderClientId != null && !appSpiderClientId.isEmpty()
+                ? new AuthenticationModel(appSpiderUsername, Secret.toString(appSpiderPassword), Optional.of(appSpiderClientId))
+                : new AuthenticationModel(appSpiderUsername, Secret.toString(appSpiderPassword), Optional.empty());
         }
 
         private EnterpriseRestClient buildEnterpriseClient(CloseableHttpClient httpClient, String endpoint) {
@@ -348,30 +347,38 @@ public class PostBuildScan extends Notifier {
          * @return ListBoxModel containing the scan config names
          */
         public ListBoxModel doFillClientNameItems() {
-
             Map<String, String> idToNames = getClientIdNamePairs()
                 .stream()
                 .collect(Collectors.toMap(ClientIdNamePair::getName, ClientIdNamePair::getId));
-
             this.clientIdToNames = Optional.of(idToNames);
 
-            String[] clientNames = new String[idToNames.size()];
-            idToNames.keySet().toArray(clientNames);
+            String[] clientNames = idToNames.keySet()
+                .stream()
+                .sorted()
+                .toArray(String[]::new);
 
             String selected = clientNames.length > 0
                 ? clientNames[0]
                 : "[Select a client name]";
-
             return buildListBoxModel(selected, clientNames);
         }
 
+        private static final String CLIENT_NAME_PLACEHOLDER_TEXT = "Loading list of client names...";
 
         /**
          * Method for populating the dropdown menu with
          * all the available scan configs
          * @return ListBoxModel containing the scan config names
          */
-        public ListBoxModel doFillConfigNameItems() {
+        public ListBoxModel doFillConfigNameItems(@QueryParameter String clientName) {
+
+            if (clientName == null || clientName.equals(CLIENT_NAME_PLACEHOLDER_TEXT) || !clientIdToNames.isPresent())
+                return new ListBoxModel();
+
+            appSpiderClientId = "";
+            if (clientIdToNames.get().containsKey(clientName)) {
+                appSpiderClientId = clientIdToNames.get().get(clientName);
+            }
             scanConfigNames = getConfigNames();
             return buildListBoxModel("[Select a scan config name]", scanConfigNames);
         }
