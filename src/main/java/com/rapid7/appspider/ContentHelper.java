@@ -1,5 +1,5 @@
 /*
- * Copyright © 2003 - 2020 Rapid7, Inc.  All rights reserved.
+ * Copyright © 2003 - 2021 Rapid7, Inc.  All rights reserved.
  */
 
 package com.rapid7.appspider;
@@ -212,10 +212,31 @@ public class ContentHelper {
                 : Optional.empty();
     }
     private void logResponseFailure(String introduction, HttpResponse response) {
+        if (response == null) {
+            logger.severe("Response is null");
+            return;
+        }
+
         JSONObject error = asJson(response.getEntity()).orElse(new JSONObject());
         try {
-            final String errorMessage = error.getString("ErrorMessage");
-            final String reason = error.getString("Reason");
+            final String MESSAGE_KEY = "Message";
+
+            String errorMessage;
+            if (error.has("ErrorMessage")) {
+                errorMessage = error.getString("ErrorMessage");
+            } else if (error.has(MESSAGE_KEY)) {
+                errorMessage = error.getString(MESSAGE_KEY);
+            } else {
+                errorMessage = response.getStatusLine().toString();
+            }
+            String reason;
+            if (error.has("Reason")) {
+                reason = error.getString("Reason");
+            } else if (error.has(MESSAGE_KEY)) {
+                reason = error.getString(MESSAGE_KEY);
+            } else {
+                reason = response.getStatusLine().toString();
+            }
             logger.severe(String.format("%s: '%s'.  with reason '%s'", introduction, errorMessage, reason));
         } catch (JSONException e) {
             logger.severe(String.format("%s: %s.%nexception: %s",

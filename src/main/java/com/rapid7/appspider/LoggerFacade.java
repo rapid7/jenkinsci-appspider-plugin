@@ -9,4 +9,5 @@ public interface LoggerFacade {
     void info(String message);
     void warn(String message);
     void severe(String message);
+    void verbose(String message);
 }
