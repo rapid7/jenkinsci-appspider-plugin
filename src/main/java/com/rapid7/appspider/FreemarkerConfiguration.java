@@ -18,20 +18,19 @@ import freemarker.template.Template;
  * </p>
  */
 class FreemarkerConfiguration {
-    private static FreemarkerConfiguration instance;
     private final Configuration configuration;
 
     /**
      * get the singelton instance, initializing it if necessary
      */
     public static FreemarkerConfiguration getInstance() {
-        if (instance == null) {
-            synchronized(FreemarkerConfiguration.class) {
-                instance = new FreemarkerConfiguration();
-            }
-        }
-        return instance;
+        return Container.INSTANCE;
     }
+
+    private static class Container {
+        private static final FreemarkerConfiguration INSTANCE = new FreemarkerConfiguration();
+    }
+
     /**
      * Gets a template using name {@code template} in call to inner {@code Configuration}
      * @param template name of the template to get
