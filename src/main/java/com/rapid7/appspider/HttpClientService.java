@@ -50,7 +50,8 @@ public class HttpClientService implements ClientService {
     @Override
     public Optional<JSONObject> executeJsonRequest(HttpRequestBase request) {
         try {
-            return contentHelper.responseToJSONObject(httpClient.execute(request));
+            
+            return contentHelper.responseToJSONObject(httpClient.execute(request), request.getURI().getPath());
 
         } catch (IOException e) {
             logger.severe(e.toString());

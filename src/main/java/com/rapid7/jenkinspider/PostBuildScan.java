@@ -28,6 +28,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -194,6 +195,8 @@ public class PostBuildScan extends Notifier {
         private String appSpiderClientName;
         private Optional<Map<String, String>> clientIdToNames;
         private static final String INVALID_CREDENTIALS = "Invalid username / password combination";
+        private static final int NUMBER_OF_GET_CLIENT_ATTEMPTS = 2; // 1 retry
+        private static final long DELAY_BETWEEN_GET_CLIENT_ATTEMPTS = 1000;
 
         public DescriptorImp() {
 
@@ -355,8 +358,8 @@ public class PostBuildScan extends Notifier {
          * all the available scan configs
          * @return ListBoxModel containing the scan config names
          */
-        public ListBoxModel doFillClientNameItems() {
-            Map<String, String> idToNames = getClientIdNamePairs()
+        public ListBoxModel doFillClientNameItems() throws InterruptedException {
+            Map<String, String> idToNames = getClientIdNamePairsWithRetry(NUMBER_OF_GET_CLIENT_ATTEMPTS, DELAY_BETWEEN_GET_CLIENT_ATTEMPTS)
                 .stream()
                 .collect(Collectors.toMap(ClientIdNamePair::getName, ClientIdNamePair::getId));
             this.clientIdToNames = Optional.of(idToNames);
@@ -477,6 +480,19 @@ public class PostBuildScan extends Notifier {
             return executeRequestWithAuthorization((client, authKey) ->
                 client.getConfigNames(authKey).orElse(new String[0]),
                 new String[0]);
+        }
+
+        private List<ClientIdNamePair> getClientIdNamePairsWithRetry(int attempts, long delayInMilliseconds) throws InterruptedException {
+
+            for (int i = 0; i< attempts; i++) {
+                List<ClientIdNamePair> pairs = getClientIdNamePairs();
+                if (!pairs.isEmpty()) {
+                    return pairs;
+                }
+                Thread.sleep(delayInMilliseconds);
+            }
+
+            return Collections.emptyList();
         }
 
         /**
