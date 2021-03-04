@@ -106,9 +106,11 @@ public class ContentHelper {
     /**
      * extracts the response content into a JSONObject
      * @param response response to extract JSONObject from
+     * @param path the path used for diagnostic purposes, this is the path to the 
+     *             request which can be logged in the event of failure
      * @return on success an Optional containing a JSONObject; otherwise, Optional.empty()
      */
-    public Optional<JSONObject> responseToJSONObject(HttpResponse response) {
+    public Optional<JSONObject> responseToJSONObject(HttpResponse response, String path) {
         if (isSuccessStatusCode(response)) {
             return asJson(response.getEntity());
         }
