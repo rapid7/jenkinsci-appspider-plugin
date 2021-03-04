@@ -44,6 +44,6 @@ class FreemarkerConfiguration {
 
     private FreemarkerConfiguration() {
         configuration = new Configuration(Configuration.VERSION_2_3_30);
-        configuration.setClassForTemplateLoading(EnterpriseRestClient.class, "template");
+        configuration.setClassForTemplateLoading(EnterpriseRestClient.class, "/com/rapid7/appspider/template/");
     }
 }
