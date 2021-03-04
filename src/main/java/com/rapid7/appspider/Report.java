@@ -1,5 +1,5 @@
 /*
- * Copyright © 2003 - 2020 Rapid7, Inc.  All rights reserved.
+ * Copyright © 2003 - 2021 Rapid7, Inc.  All rights reserved.
  */
 
 package com.rapid7.appspider;
@@ -17,15 +17,17 @@ import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.Optional;
 
+import com.rapid7.appspider.models.AuthenticationModel;
+
 public class Report {
 
     private static final int BUFFER_SIZE = 4096;
 
-    private final StandardEnterpriseClient client;
+    private final EnterpriseClient client;
     private final ScanSettings settings;
     private final LoggerFacade log;
 
-    public Report(StandardEnterpriseClient client, ScanSettings settings, LoggerFacade log) {
+    public Report(EnterpriseClient client, ScanSettings settings, LoggerFacade log) {
 
         if (Objects.isNull(client))
             throw new IllegalArgumentException("client cannot be null");
@@ -39,7 +41,7 @@ public class Report {
         this.log = log;
     }
 
-    public boolean saveReport(String username, String password, String scanId, FilePath directory) {
+    public boolean saveReport(AuthenticationModel authModel, String scanId, FilePath directory) {
 
         if (Objects.isNull(directory))
             throw new IllegalArgumentException("directory cannot be null or empty");
@@ -48,7 +50,7 @@ public class Report {
         String reportFolder = Paths.get("" + directory.getParent(), directory.getBaseName()).toString();
 
         log.println("Generating xml report and downloading report zip file to:" + directory);
-        Optional<String> maybeAuthToken = client.login(username, password);
+        Optional<String> maybeAuthToken = client.login(authModel);
         if (!maybeAuthToken.isPresent()) {
             log.println("Unauthorized: unable to retrieve vulnerabilities summary and report.zip");
             return false;

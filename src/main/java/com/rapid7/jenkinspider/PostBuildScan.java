@@ -1,6 +1,9 @@
 package com.rapid7.jenkinspider;
 
 import com.rapid7.appspider.*;
+import com.rapid7.appspider.datatransferobjects.ClientIdNamePair;
+import com.rapid7.appspider.models.AuthenticationModel;
+
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -23,7 +26,11 @@ import org.kohsuke.stapler.StaplerRequest;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
@@ -35,8 +42,9 @@ import java.util.stream.Collectors;
  */
 public class PostBuildScan extends Notifier {
 
-    private final String configName;  // Not set to final since it may change
-                                // if user decided to create a new scan config
+    private String clientName; // Not set to final since it may change
+    private final String configName; // Not set to final since it may change
+    // if user decided to create a new scan config
 
     private final String reportName;
     private final boolean enableScan;
@@ -47,10 +55,10 @@ public class PostBuildScan extends Notifier {
     private final String scanConfigEngineGroupName;
 
     @DataBoundConstructor
-    public PostBuildScan(String configName, String reportName,
-                         Boolean enableScan, Boolean generateReport,
-                         String scanConfigName, String scanConfigUrl,
-                         String scanConfigEngineGroupName ) {
+    @SuppressWarnings({ "java:S107" })
+    public PostBuildScan(String clientName, String configName, String reportName, Boolean enableScan,
+            Boolean generateReport, String scanConfigName, String scanConfigUrl, String scanConfigEngineGroupName) {
+        this.clientName = clientName;
         this.configName = configName;
         this.reportName = reportName;
         this.enableScan = enableScan;
@@ -60,15 +68,18 @@ public class PostBuildScan extends Notifier {
         this.scanConfigEngineGroupName = scanConfigEngineGroupName;
     }
 
-
     @Override
     public BuildStepMonitor getRequiredMonitorService() {
         return BuildStepMonitor.NONE;
     }
 
     /*
-    *  This will be used from the config.jelly
-    * */
+     * This will be used from the config.jelly
+     */
+    public String getClientName() {
+        return clientName;
+    }
+
     public String getConfigName() {
         return configName;
     }
@@ -91,11 +102,13 @@ public class PostBuildScan extends Notifier {
 
     /**
      * {@inheritDoc}
+     * 
      * @return boolean representing success or failure of the action to perform
      * @throws InterruptedException if stop is requested by the user
      */
     @Override
-    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
+    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
+            throws InterruptedException {
 
         LoggerFacade log = new PrintStreamLoggerFacade(listener.getLogger());
 
@@ -108,13 +121,10 @@ public class PostBuildScan extends Notifier {
         String appSpiderEntUrl = getDescriptor().getAppSpiderEntUrl();
         log.println("Value of AppSpider Enterprise Server Url: " + appSpiderEntUrl);
 
-        String appSpiderUsername = getDescriptor().getAppSpiderUsername();
-        log.println("Value of AppSpider Username: " + appSpiderUsername);
-
-        Secret secretAppSpiderPassword = getDescriptor().getAppSpiderPassword();
-        String appSpiderPassword = !Objects.isNull(secretAppSpiderPassword)
-            ? Secret.toString(secretAppSpiderPassword)
-            : "";
+        AuthenticationModel authModel = getDescriptor().buildAuthenticationModel();
+        log.println("Value of AppSpider Username: " + authModel.getUsername());
+        log.verbose(String.format("Value of AppSpider configId: %s",
+                authModel.hasClientId() ? authModel.getClientId() : "(none)"));
         log.println("Value of Scan Configuration name: " + configName);
 
         boolean allowSelfSignedCertificate = getDescriptor().getAppSpiderAllowSelfSignedCertificate();
@@ -122,16 +132,15 @@ public class PostBuildScan extends Notifier {
 
         try {
             ContentHelper contentHelper = new ContentHelper(log);
-            StandardEnterpriseClient client = new StandardEnterpriseClient(
-                new HttpClientService(new HttpClientFactory(allowSelfSignedCertificate).getClient(), contentHelper, log),
-                appSpiderEntUrl,
-                new ApiSerializer(log),
-                contentHelper,
-                log);
-            ScanSettings settings = new ScanSettings(configName, reportName, true, generateReport, scanConfigName, scanConfigUrl, scanConfigEngineGroupName);
+            EnterpriseRestClient client = new EnterpriseRestClient(
+                    new HttpClientService(new HttpClientFactory(allowSelfSignedCertificate).getClient(), contentHelper,
+                            log),
+                    appSpiderEntUrl, new ApiSerializer(log), contentHelper, log);
+            ScanSettings settings = new ScanSettings(configName, reportName, true, generateReport, scanConfigName,
+                    scanConfigUrl, scanConfigEngineGroupName);
 
             Scan scan = new Scan(client, settings, log);
-            if (!scan.process(appSpiderUsername, appSpiderPassword))
+            if (!scan.process(authModel))
                 return false;
 
             FilePath filePath = build.getWorkspace();
@@ -145,8 +154,7 @@ public class PostBuildScan extends Notifier {
                 return false;
             }
 
-            return new Report(client, settings, log)
-                .saveReport(appSpiderUsername, appSpiderPassword, scanId, filePath);
+            return new Report(client, settings, log).saveReport(authModel, scanId, filePath);
 
         } catch (IllegalArgumentException e) {
             log.println(e.toString());
@@ -163,14 +171,14 @@ public class PostBuildScan extends Notifier {
         return (DescriptorImp) super.getDescriptor();
     }
 
-
     /**
      * <p>
-     * Descriptor for {@link PostBuildScan}. Used as a singleton.
-     * The class is marked as public so that it can be accessed from views.
+     * Descriptor for {@link PostBuildScan}. Used as a singleton. The class is
+     * marked as public so that it can be accessed from views.
      *
      * <p>
-     * See <tt>src/main/resources/hudson/plugins/hello_world/HelloWorldBuilder/*.jelly</tt>
+     * See
+     * <tt>src/main/resources/hudson/plugins/hello_world/HelloWorldBuilder/*.jelly</tt>
      * for the actual HTML fragment for the configuration screen.
      */
     @Extension
@@ -180,12 +188,20 @@ public class PostBuildScan extends Notifier {
         private String appSpiderUsername;
         private Secret appSpiderPassword;
         private boolean appSpiderAllowSelfSignedCertificate;
+        private boolean appSpiderEnableMultiClientOrSysAdmin;
         private String[] scanConfigNames;
         private String[] scanConfigEngines;
+        private String appSpiderClientId;
+        private String appSpiderClientName;
+        private Optional<Map<String, String>> clientIdToNames;
         private static final String INVALID_CREDENTIALS = "Invalid username / password combination";
+        private static final int NUMBER_OF_GET_CLIENT_ATTEMPTS = 2; // 1 retry
+        private static final long DELAY_BETWEEN_GET_CLIENT_ATTEMPTS = 1000;
 
         public DescriptorImp() {
 
+            setAppSpiderClientId("");
+            clientIdToNames = Optional.empty();
             load();
         }
 
@@ -194,10 +210,10 @@ public class PostBuildScan extends Notifier {
          *
          * @param value This parameter receives the value that the user has typed.
          * @return Indicates the outcome of the validation. This is sent to the browser.
-         * <p>
-         * Note that returning {@link FormValidation#error(String)} does not
-         * prevent the form from being saved. It just means that a message
-         * will be displayed to the user.
+         *         <p>
+         *         Note that returning {@link FormValidation#error(String)} does not
+         *         prevent the form from being saved. It just means that a message will
+         *         be displayed to the user.
          */
         public FormValidation doCheckappSpiderEntUrl(@QueryParameter String value) {
             if (value.length() == 0)
@@ -250,6 +266,14 @@ public class PostBuildScan extends Notifier {
         public void setAppSpiderAllowSelfSignedCertificate(boolean appSpiderAllowSelfSignedCertificate) {
             this.appSpiderAllowSelfSignedCertificate = appSpiderAllowSelfSignedCertificate;
         }
+        public boolean isAppSpiderEnableMultiClientOrSysAdmin() {
+            return appSpiderEnableMultiClientOrSysAdmin;
+        }
+
+        public void setAppSpiderEnableMultiClientOrSysAdmin(boolean appSpiderAllowMultiClientOrSysAdmin) {
+            this.appSpiderEnableMultiClientOrSysAdmin = appSpiderAllowMultiClientOrSysAdmin;
+        }
+
 
         public String[] getScanConfigNames() {
             return scanConfigNames.clone();
@@ -259,7 +283,35 @@ public class PostBuildScan extends Notifier {
             return scanConfigEngines.clone();
         }
 
-        private StandardEnterpriseClient buildEnterpriseClient(CloseableHttpClient httpClient, String endpoint) {
+        public String getAppSpiderClientId() {
+            return appSpiderClientId;
+        }
+
+        public void setAppSpiderClientId(String appSpiderClientId) {
+            this.appSpiderClientId = appSpiderClientId;
+        }
+
+        public String getAppSpiderClientName() {
+            return appSpiderClientName;
+        }
+
+        public void setAppSpiderClientName(String appSpiderClientName) {
+            this.appSpiderClientName = appSpiderClientName;
+            if (!this.clientIdToNames.isPresent()) 
+                return;
+            Map<String, String> idToNames = clientIdToNames.get();
+            String clientId = idToNames.getOrDefault(appSpiderClientName, "NOT-FOUND");
+            if (!clientId.equals("NOT-FOUND"))
+                setAppSpiderClientId(clientId);
+        }
+
+        public AuthenticationModel buildAuthenticationModel() {
+            return appSpiderClientId != null && !appSpiderClientId.isEmpty() && appSpiderEnableMultiClientOrSysAdmin
+                ? new AuthenticationModel(appSpiderUsername, Secret.toString(appSpiderPassword), Optional.of(appSpiderClientId))
+                : new AuthenticationModel(appSpiderUsername, Secret.toString(appSpiderPassword), Optional.empty());
+        }
+
+        private EnterpriseRestClient buildEnterpriseClient(CloseableHttpClient httpClient, String endpoint) {
             LoggerFacade logger = new LoggerFacade() {
                 final java.util.logging.Logger logger = java.util.logging.Logger.getLogger("appspider-plugin");
                 @Override
@@ -278,10 +330,14 @@ public class PostBuildScan extends Notifier {
                 public void severe(String message) {
                     logger.log(Level.SEVERE, message);
                 }
+                @Override
+                public void verbose(String message) {
+                    logger.log(Level.FINE, message);
+                }
             };
 
             ContentHelper contentHelper = new ContentHelper(logger);
-            return new StandardEnterpriseClient(
+            return new EnterpriseRestClient(
                     new HttpClientService(httpClient, contentHelper, logger),
                     endpoint,
                     new ApiSerializer(logger),
@@ -302,7 +358,40 @@ public class PostBuildScan extends Notifier {
          * all the available scan configs
          * @return ListBoxModel containing the scan config names
          */
-        public ListBoxModel doFillConfigNameItems() {
+        public ListBoxModel doFillClientNameItems() throws InterruptedException {
+            Map<String, String> idToNames = getClientIdNamePairsWithRetry(NUMBER_OF_GET_CLIENT_ATTEMPTS, DELAY_BETWEEN_GET_CLIENT_ATTEMPTS)
+                .stream()
+                .collect(Collectors.toMap(ClientIdNamePair::getName, ClientIdNamePair::getId));
+            this.clientIdToNames = Optional.of(idToNames);
+
+            String[] clientNames = idToNames.keySet()
+                .stream()
+                .sorted()
+                .toArray(String[]::new);
+
+            String selected = clientNames.length > 0
+                ? clientNames[0]
+                : "[Select a client name]";
+            return buildListBoxModel(selected, clientNames);
+        }
+
+        private static final String CLIENT_NAME_PLACEHOLDER_TEXT = "Loading list of client names...";
+
+        /**
+         * Method for populating the dropdown menu with
+         * all the available scan configs
+         * @return ListBoxModel containing the scan config names
+         */
+        public ListBoxModel doFillConfigNameItems(@QueryParameter String clientName) {
+
+            if (clientName == null || clientName.equals(CLIENT_NAME_PLACEHOLDER_TEXT) || !clientIdToNames.isPresent()){
+                return buildListBoxModel("[Select an engine group name]", new String[0]);
+            }
+
+            appSpiderClientId = "";
+            if (clientIdToNames.get().containsKey(clientName)) {
+                appSpiderClientId = clientIdToNames.get().get(clientName);
+            }
             scanConfigNames = getConfigNames();
             return buildListBoxModel("[Select a scan config name]", scanConfigNames);
         }
@@ -333,13 +422,14 @@ public class PostBuildScan extends Notifier {
          * @param password Password used for authentication
          * @return FormValidation result of the credentials test
          */
-        public FormValidation doTestCredentials(@QueryParameter("appSpiderAllowSelfSignedCertificate") final boolean allowSelfSignedCertificate,
+        public FormValidation doTestCredentials(@QueryParameter("appSpiderAllowSelfSignedCertificate") final boolean allowSelfSignedCertificate,                                                
                                                 @QueryParameter("appSpiderEntUrl") final String appSpiderEntUrl,
                                                 @QueryParameter("appSpiderUsername") final String username,
-                                                @QueryParameter("appSpiderPassword") final String password) {
+                                                @QueryParameter("appSpiderPassword") final Secret password) {
+
             return executeRequest(appSpiderEntUrl, allowSelfSignedCertificate, client -> {
                 try {
-                    if (!client.testAuthentication(username, password)) {
+                    if (!client.testAuthentication(new AuthenticationModel(username, Secret.toString(password)))) {
                         return FormValidation.error(INVALID_CREDENTIALS);
                     } else {
                         return FormValidation.ok("Connected Successfully.");
@@ -392,6 +482,28 @@ public class PostBuildScan extends Notifier {
                 new String[0]);
         }
 
+        private List<ClientIdNamePair> getClientIdNamePairsWithRetry(int attempts, long delayInMilliseconds) throws InterruptedException {
+
+            for (int i = 0; i< attempts; i++) {
+                List<ClientIdNamePair> pairs = getClientIdNamePairs();
+                if (!pairs.isEmpty()) {
+                    return pairs;
+                }
+                Thread.sleep(delayInMilliseconds);
+            }
+
+            return Collections.emptyList();
+        }
+
+        /**
+         * @return gets list of client IdNamePairs
+         */
+        private List<ClientIdNamePair> getClientIdNamePairs() {
+            return executeRequestWithAuthorization((client, authKey) ->
+                client.getClientNameIdPairs(authKey).orElse(new ArrayList<>()),
+                new ArrayList<ClientIdNamePair>());
+        }
+
         /**
          * @return array of Strings representing the engine group names
          */
@@ -424,7 +536,7 @@ public class PostBuildScan extends Notifier {
                     return errorResult;
                 }
 
-                Optional<String> maybeAuthKey = client.login(appSpiderUsername, Secret.toString(appSpiderPassword));
+                Optional<String> maybeAuthKey = client.login(buildAuthenticationModel());
                 if (!maybeAuthKey.isPresent()) {
                     FormValidation.error("Unauthorized");
                     return errorResult;

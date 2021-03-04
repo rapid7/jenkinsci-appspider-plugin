@@ -4,10 +4,13 @@
 
 package com.rapid7.appspider;
 
+import com.rapid7.appspider.datatransferobjects.ClientIdNamePair;
 import com.rapid7.appspider.datatransferobjects.ScanResult;
+import com.rapid7.appspider.models.AuthenticationModel;
 
 import java.io.InputStream;
 import java.net.URL;
+import java.util.List;
 import java.util.Optional;
 
 public interface EnterpriseClient {
@@ -19,19 +22,17 @@ public interface EnterpriseClient {
 
     /**
      * calls the /Authentication/Login endpoint with provided details
-     * @param username Username
-     * @param password Password
+     * @param authModel authentication details such as username, password and optionally clientId
      * @return on success Optional containing the authorization token; otherwise empty
      */
-    Optional<String> login(String username, String password);
+    Optional<String> login(AuthenticationModel authModel);
 
     /**
      * calls the /Authentication/Login endpoint with provided details returning true if credentials are valid
-     * @param username Username
-     * @param password Password
+     * @param authModel authentication details such as username, password and optionally clientId
      * @return true if endpoint returns authorization token; otherwise, false
      */
-    boolean testAuthentication(String username, String password);
+    boolean testAuthentication(AuthenticationModel authModel);
 
     /**
      * fetches the names of available engine groups
@@ -117,4 +118,12 @@ public interface EnterpriseClient {
      * @return Optional containing InputStream on success; otherwise, Optional.empty()
      */
     Optional<InputStream> getReportZip(String authToken, String scanId);
+
+    /**
+     * gets an array of all name/id pairs of clients that the authorized user can access
+     * @param authToken authorization token required to execute request
+     * @return array of ClientIdNamePair objects representing the id's and names 
+     *         of accessible clients
+     */
+    Optional<List<ClientIdNamePair>> getClientNameIdPairs(String authToken);
 }

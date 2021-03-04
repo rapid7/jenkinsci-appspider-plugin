@@ -1,10 +1,11 @@
 /*
- * Copyright © 2003 - 2020 Rapid7, Inc.  All rights reserved.
+ * Copyright © 2003 - 2021 Rapid7, Inc.  All rights reserved.
  */
 
 package com.rapid7.appspider;
 
 import com.rapid7.appspider.datatransferobjects.ScanResult;
+import com.rapid7.appspider.models.AuthenticationModel;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -19,12 +20,12 @@ public class Scan {
     private static final String FINISHED_SCANNING = SUCCESSFUL_SCAN + "|" + UNSUCCESSFUL_SCAN + "|" + FAILED_SCAN;
     private static final String UNAUTHORIZED_ERROR = "Unauthorized, please verify credentials and try again.";
 
-    private final StandardEnterpriseClient client;
+    private final EnterpriseClient client;
     private final ScanSettings settings;
     private final LoggerFacade log;
     private Optional<String> id;
 
-    public Scan(StandardEnterpriseClient client, ScanSettings settings, LoggerFacade log) {
+    public Scan(EnterpriseClient client, ScanSettings settings, LoggerFacade log) {
         if (Objects.isNull(client))
             throw new IllegalArgumentException("client cannot be null");
         if (Objects.isNull(settings))
@@ -44,8 +45,8 @@ public class Scan {
         return id;
     }
 
-    public boolean process(String username, String password) throws InterruptedException {
-        Optional<String> maybeAuthToken = client.login(username, password);
+    public boolean process(AuthenticationModel authModel) throws InterruptedException {
+        Optional<String> maybeAuthToken = client.login(authModel);
         if (!maybeAuthToken.isPresent()) {
             log.println(UNAUTHORIZED_ERROR);
             return false;
@@ -67,9 +68,9 @@ public class Scan {
             return true;
         }
 
-        waitForScanCompletion(runResult.getScanId(), username, password);
+        waitForScanCompletion(runResult.getScanId(), authModel);
 
-        maybeAuthToken = client.login(username, password);
+        maybeAuthToken = client.login(authModel);
         if (!maybeAuthToken.isPresent()) {
             log.println(UNAUTHORIZED_ERROR);
             return false;
@@ -125,12 +126,12 @@ public class Scan {
         }
     }
 
-    private void waitForScanCompletion(String scanId, String username, String password) throws InterruptedException {
+    private void waitForScanCompletion(String scanId, AuthenticationModel authModel) throws InterruptedException {
         String scanStatus;
         try {
             do {
                 TimeUnit.SECONDS.sleep(settings.getStatusPollTime());
-                scanStatus = getStatus(scanId, username, password)
+                scanStatus = getStatus(scanId, authModel)
                         .orElseGet(this::failedStatusRequest);
                 log.println("Scan status: [" + scanStatus +"]");
 
@@ -141,8 +142,8 @@ public class Scan {
             throw e;
         }
     }
-    private Optional<String> getStatus(String scanId, String username, String password) {
-        Optional<String> authToken = client.login(username, password);
+    private Optional<String> getStatus(String scanId, AuthenticationModel authModel) {
+        Optional<String> authToken = client.login(authModel);
         if (!authToken.isPresent()) {
             log.println(UNAUTHORIZED_ERROR);
             return Optional.empty();

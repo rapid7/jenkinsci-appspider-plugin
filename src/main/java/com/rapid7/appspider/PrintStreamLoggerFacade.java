@@ -33,4 +33,8 @@ public class PrintStreamLoggerFacade implements LoggerFacade {
     public void severe(String message) {
         logger.log(Level.SEVERE, message);
     }
+    @Override
+    public void verbose(String message) {
+        logger.log(Level.FINE, message);
+    }
 }
