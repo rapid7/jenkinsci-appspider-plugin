@@ -175,8 +175,7 @@ public class PostBuildScan extends Notifier {
      * <p>
      * Descriptor for {@link PostBuildScan}. Used as a singleton. The class is
      * marked as public so that it can be accessed from views.
-     *
-     * <p>
+     * </p>
      */
     @Extension
     public static final class DescriptorImp extends BuildStepDescriptor<Publisher> {
