@@ -59,7 +59,7 @@ public class AuthenticationModel {
      * should be called prior to {@code getClientId} to ensure a value is present,
      * otherwise an exception may occur
      * </p>
-     * @return
+     * @return true if client id is set; otherwise, false
      */
     public boolean hasClientId() {
         return clientId.isPresent();
