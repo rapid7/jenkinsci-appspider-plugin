@@ -177,9 +177,6 @@ public class PostBuildScan extends Notifier {
      * marked as public so that it can be accessed from views.
      *
      * <p>
-     * See
-     * <tt>src/main/resources/hudson/plugins/hello_world/HelloWorldBuilder/*.jelly</tt>
-     * for the actual HTML fragment for the configuration screen.
      */
     @Extension
     public static final class DescriptorImp extends BuildStepDescriptor<Publisher> {
