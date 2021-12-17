@@ -123,8 +123,10 @@ public class PostBuildScan extends Notifier {
 
         AuthenticationModel authModel = getDescriptor().buildAuthenticationModel();
         log.println("Value of AppSpider Username: " + authModel.getUsername());
-        log.verbose(String.format("Value of AppSpider configId: %s",
-                authModel.hasClientId() ? authModel.getClientId() : "(none)"));
+        if (log.isVerboseEnabled()) {
+            log.verbose(String.format("Value of AppSpider configId: %s",
+                    authModel.hasClientId() ? authModel.getClientId() : "(none)"));
+        }
         log.println("Value of Scan Configuration name: " + configName);
 
         boolean allowSelfSignedCertificate = getDescriptor().getAppSpiderAllowSelfSignedCertificate();
@@ -307,8 +309,8 @@ public class PostBuildScan extends Notifier {
                 : new AuthenticationModel(appSpiderUsername, Secret.toString(appSpiderPassword), Optional.empty());
         }
 
-        private EnterpriseRestClient buildEnterpriseClient(CloseableHttpClient httpClient, String endpoint) {
-            LoggerFacade logger = new LoggerFacade() {
+        private LoggerFacade buildLoggerFacade() {
+            return new LoggerFacade() {
                 final java.util.logging.Logger logger = java.util.logging.Logger.getLogger("appspider-plugin");
                 @Override
                 public void println(String message) {
@@ -330,8 +332,31 @@ public class PostBuildScan extends Notifier {
                 public void verbose(String message) {
                     logger.log(Level.FINE, message);
                 }
-            };
 
+                @Override
+                public boolean isInfoEnabled() {
+                    return logger.isLoggable(Level.INFO);
+                }
+
+                @Override
+                public boolean isWarnEnabled() {
+                    return logger.isLoggable(Level.WARNING);
+                }
+
+                @Override
+                public boolean isSevereEnabled() {
+                    return logger.isLoggable(Level.SEVERE);
+                }
+
+                @Override
+                public boolean isVerboseEnabled() {
+                    return logger.isLoggable(Level.ALL);
+                }
+            };
+        }
+
+        private EnterpriseRestClient buildEnterpriseClient(CloseableHttpClient httpClient, String endpoint) {
+            LoggerFacade logger = buildLoggerFacade();
             ContentHelper contentHelper = new ContentHelper(logger);
             return new EnterpriseRestClient(
                     new HttpClientService(httpClient, contentHelper, logger),
@@ -457,7 +482,7 @@ public class PostBuildScan extends Notifier {
                 }
                 return FormValidation.ok("Valid scan configuration name and url.");
             } catch (IOException /* | MalformedURLException */ e) {
-                e.printStackTrace();
+                buildLoggerFacade().println(e.getMessage() + " from doValidateNewScanConfig");
                 return FormValidation.error("Unable to connect to \"" + scanConfigUrl +"\". Try again in a few mins or " +
                         "try another url");
             }
@@ -517,7 +542,7 @@ public class PostBuildScan extends Notifier {
                 EnterpriseClient client = buildEnterpriseClient(httpClient, endpoint);
                 return supplier.apply(client);
             } catch (IOException e) {
-                e.printStackTrace();
+                buildLoggerFacade().println(e.getMessage() + " from executeRequest(endpoint)");
                 return errorResult;
             }
         }
@@ -539,7 +564,7 @@ public class PostBuildScan extends Notifier {
                 }
                 return request.executeRequest(client, maybeAuthKey.get());
             } catch (IOException e) {
-                e.printStackTrace();
+                buildLoggerFacade().println(e.getMessage() + " from executeRequstWithAuthorization");
                 return errorResult;
             }
         }

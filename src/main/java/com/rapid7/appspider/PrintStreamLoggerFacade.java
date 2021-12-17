@@ -37,4 +37,24 @@ public class PrintStreamLoggerFacade implements LoggerFacade {
     public void verbose(String message) {
         logger.log(Level.FINE, message);
     }
+
+    @Override
+    public boolean isInfoEnabled() {
+        return logger.isLoggable(Level.INFO);
+    }
+
+    @Override
+    public boolean isWarnEnabled() {
+        return logger.isLoggable(Level.WARNING);
+    }
+
+    @Override
+    public boolean isSevereEnabled() {
+        return logger.isLoggable(Level.SEVERE);
+    }
+
+    @Override
+    public boolean isVerboseEnabled() {
+        return logger.isLoggable(Level.ALL);
+    }
 }
