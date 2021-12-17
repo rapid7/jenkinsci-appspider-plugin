@@ -10,4 +10,10 @@ public interface LoggerFacade {
     void warn(String message);
     void severe(String message);
     void verbose(String message);
+
+    boolean isInfoEnabled();
+    boolean isWarnEnabled();
+    boolean isSevereEnabled();
+    boolean isVerboseEnabled();
+
 }
