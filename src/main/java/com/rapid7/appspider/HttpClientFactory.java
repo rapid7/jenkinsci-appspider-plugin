@@ -24,7 +24,7 @@ public class HttpClientFactory {
     private final SSLConnectionSocketFactory socketFactory;
     final SSLContext sslContext;
 
-    public HttpClientFactory(boolean allowSelfSignedCertificates) {
+    public HttpClientFactory(boolean allowSelfSignedCertificates) throws SslContextCreationException {
         try {
             // ignore self-signed certs since we have no control over the server setup and as such can't
             // enforce proper certificate usage
@@ -37,7 +37,7 @@ public class HttpClientFactory {
             }
 
         } catch (NoSuchAlgorithmException | KeyStoreException | KeyManagementException e) {
-            throw new RuntimeException("Unable to configure SSL Context", e);
+            throw new SslContextCreationException("Unable to configure SSL Context", e);
         }
         socketFactory = new SSLConnectionSocketFactory(sslContext,
                 new String[]{"TLSv1.2"},
