@@ -21,7 +21,7 @@ public class Scan {
     private static final String UNAUTHORIZED_ERROR = "Unauthorized, please verify credentials and try again.";
 
     private final EnterpriseClient client;
-    private final ScanSettings settings;
+    private ScanSettings settings;
     private final LoggerFacade log;
     private Optional<String> id;
 
@@ -115,10 +115,10 @@ public class Scan {
         }
 
         if  (client.saveConfig(authToken, newConfigName, newScanConfigTarget, engineGroupId.get())) {
-            settings.setConfigName(settings.getNewConfigName());
+            settings = settings
+                .withConfigName(settings.getNewConfigName())
+                .withEmptyConfigValues();
             log.println(String.format("Successfully created the scan config %s", newConfigName));
-
-            settings.resetNewConfigValues();
             return true;
         } else {
             log.println(String.format("An error occurred while attempting to save %s.", newConfigName));
@@ -138,7 +138,7 @@ public class Scan {
             } while (!scanStatus.matches(FINISHED_SCANNING));
 
         } catch (InterruptedException e) {
-            log.println("Unexpected error occured: " + e.toString());
+            log.println("Unexpected error occurred: " + e.toString());
             throw e;
         }
     }

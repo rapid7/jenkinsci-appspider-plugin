@@ -9,13 +9,13 @@ package com.rapid7.appspider;
  */
 public class ScanSettings {
 
-    private String configName;
+    private final String configName;
     private final String reportName;
     private final boolean enableScan;
     private final boolean generateReport;
 
-    private String newConfigName;
-    private String newConfigUrl;
+    private final String newConfigName;
+    private final String newConfigUrl;
     private final String scanConfigEngineGroupName;
     private final int statusPollTime;
 
@@ -43,12 +43,18 @@ public class ScanSettings {
         this.scanConfigEngineGroupName = scanConfigEngineGroupName;
         this.statusPollTime = 90;
     }
-
     public String getConfigName() {
         return configName;
     }
-    public void setConfigName(String configName) {
-        this.configName = configName;
+    public ScanSettings withConfigName(String configName) {
+        return new ScanSettings(
+            configName,
+            reportName,
+            enableScan,
+            generateReport,
+            newConfigName,
+            newConfigUrl,
+            scanConfigEngineGroupName);
     }
     public String getReportName() {
         return reportName;
@@ -74,8 +80,14 @@ public class ScanSettings {
         return statusPollTime;
     }
 
-    public void resetNewConfigValues() {
-        newConfigName = null;
-        newConfigUrl = null;
+    public ScanSettings withEmptyConfigValues() {
+        return new ScanSettings(
+            configName,
+            reportName,
+            enableScan,
+            generateReport,
+            null,
+            null,
+            scanConfigEngineGroupName);
     }
 }
