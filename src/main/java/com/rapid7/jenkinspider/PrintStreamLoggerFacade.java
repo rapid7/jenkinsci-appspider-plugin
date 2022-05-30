@@ -2,18 +2,21 @@
  * Copyright © 2003 - 2020 Rapid7, Inc.  All rights reserved.
  */
 
-package com.rapid7.appspider;
+package com.rapid7.jenkinspider;
+
+import com.rapid7.appspider.LoggerFacade;
+import hudson.model.BuildListener;
 
 import java.io.PrintStream;
 import java.util.logging.Level;
 
-public class PrintStreamLoggerFacade implements LoggerFacade {
+class PrintStreamLoggerFacade implements LoggerFacade {
 
     private final PrintStream stream;
     private final java.util.logging.Logger logger;
 
-    public PrintStreamLoggerFacade(PrintStream stream) {
-        this.stream = stream;
+    public PrintStreamLoggerFacade(BuildListener listener) {
+        this.stream = listener.getLogger();
         logger = java.util.logging.Logger.getLogger("appspider-plugin");
     }
 

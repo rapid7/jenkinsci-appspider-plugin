@@ -110,7 +110,7 @@ public class PostBuildScan extends Notifier {
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
             throws InterruptedException {
 
-        LoggerFacade log = new PrintStreamLoggerFacade(listener.getLogger());
+        LoggerFacade log = new PrintStreamLoggerFacade(listener);
 
         // Don't perform a scan
         if (!enableScan) {
@@ -152,13 +152,13 @@ public class PostBuildScan extends Notifier {
             }
             String scanId = scan.getId().orElse("");
             if (scanId.isEmpty()) {
-                log.println("Unexepcted error, scan identifier not found, unable to save retrieve report");
+                log.println("Unexpected error, scan identifier not found, unable to save retrieve report");
                 return false;
             }
 
             return new Report(client, settings, log).saveReport(authModel, scanId, filePath);
 
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | SslContextCreationException e) {
             log.println(e.toString());
             return false;
         }
@@ -541,7 +541,7 @@ public class PostBuildScan extends Notifier {
             try (CloseableHttpClient httpClient = new HttpClientFactory(appSpiderAllowSelfSignedCertificate).getClient()) {
                 EnterpriseClient client = buildEnterpriseClient(httpClient, endpoint);
                 return supplier.apply(client);
-            } catch (IOException e) {
+            } catch (IOException | SslContextCreationException e) {
                 buildLoggerFacade().println(e.getMessage() + " from executeRequest(endpoint)");
                 return errorResult;
             }
@@ -563,8 +563,8 @@ public class PostBuildScan extends Notifier {
                     return errorResult;
                 }
                 return request.executeRequest(client, maybeAuthKey.get());
-            } catch (IOException e) {
-                buildLoggerFacade().println(e.getMessage() + " from executeRequstWithAuthorization");
+            } catch (IOException | SslContextCreationException e) {
+                buildLoggerFacade().println(e.getMessage() + " from executeRequestWithAuthorization");
                 return errorResult;
             }
         }
