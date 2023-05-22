@@ -17,11 +17,13 @@ import hudson.tasks.Publisher;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.util.Secret;
+import jenkins.model.Jenkins;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.verb.POST;
 
 import java.io.IOException;
 import java.net.URL;
@@ -443,11 +445,12 @@ public class PostBuildScan extends Notifier {
          * @param password Password used for authentication
          * @return FormValidation result of the credentials test
          */
+        @POST
         public FormValidation doTestCredentials(@QueryParameter("appSpiderAllowSelfSignedCertificate") final boolean allowSelfSignedCertificate,                                                
                                                 @QueryParameter("appSpiderEntUrl") final String appSpiderEntUrl,
                                                 @QueryParameter("appSpiderUsername") final String username,
                                                 @QueryParameter("appSpiderPassword") final Secret password) {
-
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
             return executeRequest(appSpiderEntUrl, allowSelfSignedCertificate, client -> {
                 try {
                     if (!client.testAuthentication(new AuthenticationModel(username, Secret.toString(password)))) {
