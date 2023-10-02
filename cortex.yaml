@@ -1,0 +1,15 @@
+---
+info:
+  title: Jenkinsci Appspider Plugin
+  description: Jenkins plugin that calls the AppSpider API
+  x-cortex-git:
+    github:
+      alias: r7org
+      repository: rapid7/jenkinsci-appspider-plugin
+  x-cortex-tag: jenkinsci-appspider-plugin
+  x-cortex-type: service
+  x-cortex-domain-parents:
+  - tag: ias-appspider-deployment
+openapi: 3.0.1
+servers:
+- url: "/"
