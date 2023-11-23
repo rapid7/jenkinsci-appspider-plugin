@@ -110,7 +110,7 @@ public class PostBuildScan extends Notifier {
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
             throws InterruptedException {
 
-        LoggerFacade log = new PrintStreamLoggerFacade(listener.getLogger());
+        LoggerFacade log = new PrintStreamLoggerFacade(listener);
 
         // Don't perform a scan
         if (!enableScan) {
@@ -123,8 +123,10 @@ public class PostBuildScan extends Notifier {
 
         AuthenticationModel authModel = getDescriptor().buildAuthenticationModel();
         log.println("Value of AppSpider Username: " + authModel.getUsername());
-        log.verbose(String.format("Value of AppSpider configId: %s",
-                authModel.hasClientId() ? authModel.getClientId() : "(none)"));
+        if (log.isVerboseEnabled()) {
+            log.verbose(String.format("Value of AppSpider configId: %s",
+                    authModel.hasClientId() ? authModel.getClientId() : "(none)"));
+        }
         log.println("Value of Scan Configuration name: " + configName);
 
         boolean allowSelfSignedCertificate = getDescriptor().getAppSpiderAllowSelfSignedCertificate();
@@ -150,13 +152,13 @@ public class PostBuildScan extends Notifier {
             }
             String scanId = scan.getId().orElse("");
             if (scanId.isEmpty()) {
-                log.println("Unexepcted error, scan identifier not found, unable to save retrieve report");
+                log.println("Unexpected error, scan identifier not found, unable to save retrieve report");
                 return false;
             }
 
             return new Report(client, settings, log).saveReport(authModel, scanId, filePath);
 
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | SslContextCreationException e) {
             log.println(e.toString());
             return false;
         }
@@ -307,8 +309,8 @@ public class PostBuildScan extends Notifier {
                 : new AuthenticationModel(appSpiderUsername, Secret.toString(appSpiderPassword), Optional.empty());
         }
 
-        private EnterpriseRestClient buildEnterpriseClient(CloseableHttpClient httpClient, String endpoint) {
-            LoggerFacade logger = new LoggerFacade() {
+        private LoggerFacade buildLoggerFacade() {
+            return new LoggerFacade() {
                 final java.util.logging.Logger logger = java.util.logging.Logger.getLogger("appspider-plugin");
                 @Override
                 public void println(String message) {
@@ -330,8 +332,31 @@ public class PostBuildScan extends Notifier {
                 public void verbose(String message) {
                     logger.log(Level.FINE, message);
                 }
-            };
 
+                @Override
+                public boolean isInfoEnabled() {
+                    return logger.isLoggable(Level.INFO);
+                }
+
+                @Override
+                public boolean isWarnEnabled() {
+                    return logger.isLoggable(Level.WARNING);
+                }
+
+                @Override
+                public boolean isSevereEnabled() {
+                    return logger.isLoggable(Level.SEVERE);
+                }
+
+                @Override
+                public boolean isVerboseEnabled() {
+                    return logger.isLoggable(Level.ALL);
+                }
+            };
+        }
+
+        private EnterpriseRestClient buildEnterpriseClient(CloseableHttpClient httpClient, String endpoint) {
+            LoggerFacade logger = buildLoggerFacade();
             ContentHelper contentHelper = new ContentHelper(logger);
             return new EnterpriseRestClient(
                     new HttpClientService(httpClient, contentHelper, logger),
@@ -457,7 +482,7 @@ public class PostBuildScan extends Notifier {
                 }
                 return FormValidation.ok("Valid scan configuration name and url.");
             } catch (IOException /* | MalformedURLException */ e) {
-                e.printStackTrace();
+                buildLoggerFacade().println(e.getMessage() + " from doValidateNewScanConfig");
                 return FormValidation.error("Unable to connect to \"" + scanConfigUrl +"\". Try again in a few mins or " +
                         "try another url");
             }
@@ -516,8 +541,8 @@ public class PostBuildScan extends Notifier {
             try (CloseableHttpClient httpClient = new HttpClientFactory(appSpiderAllowSelfSignedCertificate).getClient()) {
                 EnterpriseClient client = buildEnterpriseClient(httpClient, endpoint);
                 return supplier.apply(client);
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (IOException | SslContextCreationException e) {
+                buildLoggerFacade().println(e.getMessage() + " from executeRequest(endpoint)");
                 return errorResult;
             }
         }
@@ -538,8 +563,8 @@ public class PostBuildScan extends Notifier {
                     return errorResult;
                 }
                 return request.executeRequest(client, maybeAuthKey.get());
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (IOException | SslContextCreationException e) {
+                buildLoggerFacade().println(e.getMessage() + " from executeRequestWithAuthorization");
                 return errorResult;
             }
         }
