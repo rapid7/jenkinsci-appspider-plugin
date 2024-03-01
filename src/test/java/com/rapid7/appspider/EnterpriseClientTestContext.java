@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.rapid7.appspider.Utility.toStringArray;
+import static com.rapid7.appspider.FunctionalUtility.toStringArray;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -47,13 +47,13 @@ public class EnterpriseClientTestContext implements AutoCloseable {
     private final HttpClient mockHttpClient;
 
     private String expectedAuthToken;
-    private String configId;
-    private String configName;
-    private String clientId;
-    private String clientName;
+    private final String configId;
+    private final String configName;
+    private final String clientId;
+    private final String clientName;
     private String expectedScanId;
     private EnterpriseClient enterpriseClient;
-    private String url;
+    private final String url;
     private Map<String, String> expectedEngineGroupsIdsByName;
     private Map<String, String> expectedEngineGroupsNamesForClient;
     private final List<EngineStub> engineGroupDetails;
@@ -61,8 +61,8 @@ public class EnterpriseClientTestContext implements AutoCloseable {
     EnterpriseClientTestContext(String url) {
         this.url = url;
         mockLogger = mock(LoggerFacade.class);
-        mockContentHelper = new ContentHelper(mockLogger);
-        mockApiSerializer = new ApiSerializer(mockLogger);
+        mockContentHelper = ContentHelper.createInstanceOrThrow(mockLogger);
+        mockApiSerializer = ApiSerializer.createInstanceOrThrow(mockLogger);
         expectedAuthToken = ""; // set by isSuccess state of each test, just being reset here
         expectedScanId = "";
         configId =  "3249E3F6-3B33-4D4E-93EB-2F464AB424A8";
@@ -157,7 +157,7 @@ public class EnterpriseClientTestContext implements AutoCloseable {
     }
 
     public EnterpriseClientTestContext configureEnterpriseClient() {
-        enterpriseClient = new EnterpriseRestClient(new HttpClientService(mockHttpClient, mockContentHelper, mockLogger), url, mockApiSerializer, mockContentHelper, mockLogger);
+        enterpriseClient = new EnterpriseRestClient(HttpClientService.createInstanceOrThrow(mockHttpClient, mockContentHelper, mockLogger), url, mockApiSerializer, mockContentHelper, mockLogger);
         return this;
     }
 

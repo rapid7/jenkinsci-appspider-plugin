@@ -11,18 +11,18 @@ public class ScanResult {
         this.isSuccess = isSuccess;
         this.scanId = scanId;
     }
-    public ScanResult(JSONObject jsonObject) {
+
+    public static ScanResult createInstanceFromJsonOrThrow(JSONObject jsonObject) {
         if (jsonObject == null)
             throw new IllegalArgumentException("jsonObject cannot be null");
 
         try {
-            isSuccess = jsonObject.getBoolean("IsSuccess");
-            scanId = jsonObject.getJSONObject("Scan").getString("Id");
-
+            boolean isSuccess = jsonObject.getBoolean("IsSuccess");
+            String scanId = jsonObject.getJSONObject("Scan").getString("Id");
+            return new ScanResult(isSuccess, scanId);
         } catch(JSONException e) {
-            throw new IllegalArgumentException("unexpected error occured parsing scan result", e);
+            throw new IllegalArgumentException("unexpected error occurred parsing scan result", e);
         }
-
     }
 
     public String getScanId() {

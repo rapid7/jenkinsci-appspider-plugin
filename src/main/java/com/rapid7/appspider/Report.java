@@ -7,6 +7,7 @@ package com.rapid7.appspider;
 import hudson.FilePath;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -27,15 +28,17 @@ public class Report {
     private final ScanSettings settings;
     private final LoggerFacade log;
 
-    public Report(EnterpriseClient client, ScanSettings settings, LoggerFacade log) {
-
+    public static Report createInstanceOrThrow(EnterpriseClient client, ScanSettings settings, LoggerFacade log) {
         if (Objects.isNull(client))
             throw new IllegalArgumentException("client cannot be null");
         if (Objects.isNull(settings))
             throw new IllegalArgumentException("settings cannot be null");
         if (Objects.isNull(log))
             throw new IllegalArgumentException("log cannot be null");
+        return new Report(client, settings, log);
+    }
 
+    private Report(EnterpriseClient client, ScanSettings settings, LoggerFacade log) {
         this.client = client;
         this.settings = settings;
         this.log = log;
@@ -51,24 +54,24 @@ public class Report {
 
         log.println("Generating xml report and downloading report zip file to:" + directory);
         Optional<String> maybeAuthToken = client.login(authModel);
-        if (!maybeAuthToken.isPresent()) {
+        if (maybeAuthToken.isEmpty()) {
             log.println("Unauthorized: unable to retrieve vulnerabilities summary and report.zip");
             return false;
         }
         String authToken = maybeAuthToken.get();
 
         String dateTimeStamp = "_" + getNowAsFormattedString();
-        Path vulnerabiltiesFilename = Paths.get(reportFolder, settings.getReportName() + dateTimeStamp + ".xml");
+        Path vulnerabilitiesFilename = Paths.get(reportFolder, settings.getReportName() + dateTimeStamp + ".xml");
         Path reportZipFilename = Paths.get(reportFolder, settings.getReportName() + dateTimeStamp +  ".zip");
 
-        return saveVulnerabilities(authToken, scanId, vulnerabiltiesFilename) &&
+        return saveVulnerabilities(authToken, scanId, vulnerabilitiesFilename) &&
                 saveReportZip(authToken, scanId, reportZipFilename);
     }
 
     private boolean saveVulnerabilities(String authToken, String scanId, Path file) {
 
         Optional<String> xml = client.getVulnerabilitiesSummaryXml(authToken, scanId);
-        if (!xml.isPresent()) {
+        if (xml.isEmpty()) {
             log.println("Unable to retrieve vulnerabilities summary.");
             return false;
         }
@@ -82,9 +85,9 @@ public class Report {
     private boolean saveXmlFile(Path file, String content) {
         try {
             if (!Files.exists(file) )
-                file = Files.createFile(file);
+                Files.createFile(file);
 
-            try (BufferedWriter writer = Files.newBufferedWriter(file)) {
+            try (BufferedWriter writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
                 writer.write(content);
                 writer.flush();
             }
@@ -100,7 +103,7 @@ public class Report {
 
         try {
             if (!Files.exists(file) )
-                file = Files.createFile(file);
+                Files.createFile(file);
 
             try (InputStream bufferedInput = new BufferedInputStream(inputStream);
                  OutputStream outputStream = Files.newOutputStream(file)) {

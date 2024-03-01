@@ -21,14 +21,14 @@ class FreemarkerConfiguration {
     private final Configuration configuration;
 
     /**
-     * get the singelton instance, initializing it if necessary
+     * get the singleton instance, initializing it if necessary
      */
     public static FreemarkerConfiguration getInstance() {
-        return Container.INSTANCE;
+        return InstanceContainer.CONFIGURATION_INSTANCE;
     }
 
-    private static class Container {
-        private static final FreemarkerConfiguration INSTANCE = new FreemarkerConfiguration();
+    private static class InstanceContainer {
+        private static final FreemarkerConfiguration CONFIGURATION_INSTANCE = new FreemarkerConfiguration();
     }
 
     /**

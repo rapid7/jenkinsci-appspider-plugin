@@ -21,22 +21,23 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 
-import static com.rapid7.appspider.Utility.isSuccessStatusCode;
-
 public class HttpClientService implements ClientService {
 
     private final HttpClient httpClient;
     private final LoggerFacade logger;
     private final ContentHelper contentHelper;
 
-    public HttpClientService(HttpClient httpClient, ContentHelper contentHelper, LoggerFacade logger) {
+    public static HttpClientService createInstanceOrThrow(HttpClient httpClient, ContentHelper contentHelper, LoggerFacade logger) {
         if (Objects.isNull(httpClient))
             throw new IllegalArgumentException("httpClient cannot be null");
         if (Objects.isNull(contentHelper))
             throw new IllegalArgumentException("jsonHelper cannot be null");
         if (Objects.isNull(logger))
             throw new IllegalArgumentException("logger cannot be null");
+        return new HttpClientService(httpClient, contentHelper, logger);
+    }
 
+    private HttpClientService(HttpClient httpClient, ContentHelper contentHelper, LoggerFacade logger) {
         this.httpClient = httpClient;
         this.contentHelper = contentHelper;
         this.logger = logger;
@@ -67,7 +68,7 @@ public class HttpClientService implements ClientService {
     public Optional<HttpEntity> executeEntityRequest(HttpRequestBase request) {
         try {
             HttpResponse response = httpClient.execute(request);
-            return isSuccessStatusCode(response)
+            return FunctionalUtility.isSuccessStatusCode(response)
                 ? Optional.of(response.getEntity())
                 : Optional.empty();
 

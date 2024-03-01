@@ -4,12 +4,11 @@ import com.rapid7.appspider.*;
 import com.rapid7.appspider.datatransferobjects.ClientIdNamePair;
 import com.rapid7.appspider.models.AuthenticationModel;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.model.BuildListener;
+import hudson.model.*;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
@@ -20,6 +19,7 @@ import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
  */
 public class PostBuildScan extends Notifier {
 
-    private String clientName; // Not set to final since it may change
+    private final String clientName; // Not set to final since it may change
     private final String configName; // Not set to final since it may change
     // if user decided to create a new scan config
 
@@ -135,15 +135,14 @@ public class PostBuildScan extends Notifier {
         log.println("Value of Allow Self-Signed certificate : " + allowSelfSignedCertificate);
 
         try {
-            ContentHelper contentHelper = new ContentHelper(log);
+            ContentHelper contentHelper = ContentHelper.createInstanceOrThrow(log);
             EnterpriseRestClient client = new EnterpriseRestClient(
-                    new HttpClientService(new HttpClientFactory(allowSelfSignedCertificate).getClient(), contentHelper,
-                            log),
-                    appSpiderEntUrl, new ApiSerializer(log), contentHelper, log);
+                    HttpClientService.createInstanceOrThrow(HttpClientFactory.createInstanceOrThrow(allowSelfSignedCertificate).getClient(), contentHelper, log),
+                    appSpiderEntUrl, ApiSerializer.createInstanceOrThrow(log), contentHelper, log);
             ScanSettings settings = new ScanSettings(configName, reportName, true, generateReport, scanConfigName,
                     scanConfigUrl, scanConfigEngineGroupName);
 
-            Scan scan = new Scan(client, settings, log);
+            DastScan scan = DastScan.createInstanceOrThrow(client, settings, log);
             if (!scan.process(authModel))
                 return false;
 
@@ -158,7 +157,7 @@ public class PostBuildScan extends Notifier {
                 return false;
             }
 
-            return new Report(client, settings, log).saveReport(authModel, scanId, filePath);
+            return Report.createInstanceOrThrow(client, settings, log).saveReport(authModel, scanId, filePath);
 
         } catch (IllegalArgumentException | SslContextCreationException e) {
             log.println(e.toString());
@@ -215,8 +214,8 @@ public class PostBuildScan extends Notifier {
          *         prevent the form from being saved. It just means that a message will
          *         be displayed to the user.
          */
-        public FormValidation doCheckappSpiderEntUrl(@QueryParameter String value) {
-            if (value.length() == 0)
+        public FormValidation doCheckAppSpiderEntUrl(@QueryParameter String value) {
+            if (value.isEmpty())
                 return FormValidation.error("Please set a value");
             if (value.length() < 4)
                 return FormValidation.warning("Isn't the value too short?");
@@ -234,6 +233,7 @@ public class PostBuildScan extends Notifier {
         /**
          * @return Display Name of the plugin
          */
+        @NonNull
         @Override
         public String getDisplayName() {
             return "Scan build using AppSpider";
@@ -307,8 +307,8 @@ public class PostBuildScan extends Notifier {
 
         public AuthenticationModel buildAuthenticationModel() {
             return appSpiderClientId != null && !appSpiderClientId.isEmpty() && appSpiderEnableMultiClientOrSysAdmin
-                ? new AuthenticationModel(appSpiderUsername, Secret.toString(appSpiderPassword), Optional.of(appSpiderClientId))
-                : new AuthenticationModel(appSpiderUsername, Secret.toString(appSpiderPassword), Optional.empty());
+                ? new AuthenticationModel(appSpiderUsername, Secret.toString(appSpiderPassword), appSpiderClientId)
+                : new AuthenticationModel(appSpiderUsername, Secret.toString(appSpiderPassword), null);
         }
 
         private LoggerFacade buildLoggerFacade() {
@@ -359,11 +359,11 @@ public class PostBuildScan extends Notifier {
 
         private EnterpriseRestClient buildEnterpriseClient(CloseableHttpClient httpClient, String endpoint) {
             LoggerFacade logger = buildLoggerFacade();
-            ContentHelper contentHelper = new ContentHelper(logger);
+            ContentHelper contentHelper = ContentHelper.createInstanceOrThrow(logger);
             return new EnterpriseRestClient(
-                    new HttpClientService(httpClient, contentHelper, logger),
+                    HttpClientService.createInstanceOrThrow(httpClient, contentHelper, logger),
                     endpoint,
-                    new ApiSerializer(logger),
+                    ApiSerializer.createInstanceOrThrow(logger),
                     contentHelper,
                     logger);
         }
@@ -381,8 +381,16 @@ public class PostBuildScan extends Notifier {
          * all the available scan configs
          * @return ListBoxModel containing the scan config names
          */
-        public ListBoxModel doFillClientNameItems() throws InterruptedException {
-            Map<String, String> idToNames = getClientIdNamePairsWithRetry(NUMBER_OF_GET_CLIENT_ATTEMPTS, DELAY_BETWEEN_GET_CLIENT_ATTEMPTS)
+        public ListBoxModel doFillClientNameItems(@AncestorInPath Item item) throws InterruptedException {
+            if (item == null) { // no context
+                return emptyListBoxModel("[Select a client name]");
+            }
+            boolean hasConfigurePermission = item.hasPermission(Item.CONFIGURE);
+            if (!hasConfigurePermission) {
+                return emptyListBoxModel("[Select a client name]");
+            }
+
+            Map<String, String> idToNames = getClientIdNamePairsWithRetry()
                 .stream()
                 .collect(Collectors.toMap(ClientIdNamePair::getName, ClientIdNamePair::getId));
             this.clientIdToNames = Optional.of(idToNames);
@@ -405,10 +413,15 @@ public class PostBuildScan extends Notifier {
          * all the available scan configs
          * @return ListBoxModel containing the scan config names
          */
-        public ListBoxModel doFillConfigNameItems(@QueryParameter String clientName) {
+        public ListBoxModel doFillConfigNameItems(@QueryParameter String clientName, @AncestorInPath Item item) {
+            if (item == null) { // no context
+                return emptyListBoxModel("[Select a scan config name]");
+            }
+            boolean hasConfigurePermission = item.hasPermission(Item.CONFIGURE);
 
-            if (clientName == null || clientName.equals(CLIENT_NAME_PLACEHOLDER_TEXT) || !clientIdToNames.isPresent()){
-                return buildListBoxModel("[Select an engine group name]", new String[0]);
+            if (!hasConfigurePermission || clientName == null || clientName.equals(CLIENT_NAME_PLACEHOLDER_TEXT) ||
+                    clientIdToNames.isEmpty()){
+                return emptyListBoxModel("[Select a scan config name]");
             }
 
             appSpiderClientId = "";
@@ -424,11 +437,21 @@ public class PostBuildScan extends Notifier {
          * all the available scan engine groups
          * @return ListBoxModel containing engine details
          */
-        public ListBoxModel doFillScanConfigEngineGroupNameItems() {
+        public ListBoxModel doFillScanConfigEngineGroupNameItems(@AncestorInPath Item item) {
+            if (item == null) { // no context
+                return emptyListBoxModel("[Select an engine group name]");
+            }
+            boolean hasConfigurePermission = item.hasPermission(Item.CONFIGURE);
+            if (!hasConfigurePermission) {
+                return emptyListBoxModel("[Select an engine group name]");
+            }
             scanConfigEngines = getEngineGroups();
             return buildListBoxModel("[Select an engine group name]", scanConfigEngines);
         }
 
+        private static ListBoxModel emptyListBoxModel(String introduction) {
+            return buildListBoxModel(introduction, new String[0]);
+        }
         private static ListBoxModel buildListBoxModel(String introduction, String[] items) {
             ListBoxModel model = new ListBoxModel();
             model.add(introduction); // Adding a default "Pick a scan configuration" entry
@@ -468,7 +491,7 @@ public class PostBuildScan extends Notifier {
         public FormValidation doValidateNewScanConfig(@QueryParameter("scanConfigName") final String scanConfigName,
                                                       @QueryParameter("scanConfigUrl") final String scanConfigUrl) {
             try {
-                final String ALPHANUMERIC_REGEX = "^[a-zA-Z0_\\-\\.]*$";
+                final String ALPHANUMERIC_REGEX = "^[a-zA-Z0_\\-.]*$";
                 if (!scanConfigName.matches(ALPHANUMERIC_REGEX) ||
                         scanConfigName.contains(" ") ||
                         scanConfigName.isEmpty()) {
@@ -486,8 +509,8 @@ public class PostBuildScan extends Notifier {
                 return FormValidation.ok("Valid scan configuration name and url.");
             } catch (IOException /* | MalformedURLException */ e) {
                 buildLoggerFacade().println(e.getMessage() + " from doValidateNewScanConfig");
-                return FormValidation.error("Unable to connect to \"" + scanConfigUrl +"\". Try again in a few mins or " +
-                        "try another url");
+                return FormValidation.error("Unable to connect to \"" + scanConfigUrl +
+                        "\". Try again in a few minutes or try another url");
             }
         }
 
@@ -506,14 +529,14 @@ public class PostBuildScan extends Notifier {
                 new String[0]);
         }
 
-        private List<ClientIdNamePair> getClientIdNamePairsWithRetry(int attempts, long delayInMilliseconds) throws InterruptedException {
+        private List<ClientIdNamePair> getClientIdNamePairsWithRetry() throws InterruptedException {
 
-            for (int i = 0; i< attempts; i++) {
+            for (int i = 0; i< DescriptorImp.NUMBER_OF_GET_CLIENT_ATTEMPTS; i++) {
                 List<ClientIdNamePair> pairs = getClientIdNamePairs();
                 if (!pairs.isEmpty()) {
                     return pairs;
                 }
-                Thread.sleep(delayInMilliseconds);
+                Thread.sleep(DescriptorImp.DELAY_BETWEEN_GET_CLIENT_ATTEMPTS);
             }
 
             return Collections.emptyList();
@@ -541,7 +564,7 @@ public class PostBuildScan extends Notifier {
             if (Objects.isNull(supplier))
                 return errorResult;
 
-            try (CloseableHttpClient httpClient = new HttpClientFactory(appSpiderAllowSelfSignedCertificate).getClient()) {
+            try (CloseableHttpClient httpClient = HttpClientFactory.createInstanceOrThrow(appSpiderAllowSelfSignedCertificate).getClient()) {
                 EnterpriseClient client = buildEnterpriseClient(httpClient, endpoint);
                 return supplier.apply(client);
             } catch (IOException | SslContextCreationException e) {
@@ -554,15 +577,14 @@ public class PostBuildScan extends Notifier {
             if (Objects.isNull(request))
                 return errorResult;
 
-            try (CloseableHttpClient httpClient = new HttpClientFactory(appSpiderAllowSelfSignedCertificate).getClient()) {
+            try (CloseableHttpClient httpClient = HttpClientFactory.createInstanceOrThrow(appSpiderAllowSelfSignedCertificate).getClient()) {
                 EnterpriseClient client = buildEnterpriseClient(httpClient, appSpiderEntUrl);
                 if (Objects.isNull(appSpiderPassword)) {
                     return errorResult;
                 }
 
                 Optional<String> maybeAuthKey = client.login(buildAuthenticationModel());
-                if (!maybeAuthKey.isPresent()) {
-                    FormValidation.error("Unauthorized");
+                if (maybeAuthKey.isEmpty()) {
                     return errorResult;
                 }
                 return request.executeRequest(client, maybeAuthKey.get());

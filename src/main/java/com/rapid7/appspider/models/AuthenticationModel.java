@@ -14,23 +14,28 @@ public class AuthenticationModel {
 
     private final String username;
     private final String password;
-    private final Optional<String> clientId;
+    private final String clientId;
 
     /**
      * instantiates a new instance of the {@code AuthenticationModel} class with no client Id
      */
     public AuthenticationModel(String username, String password) {
-        this(username, password, Optional.empty());
+        this(username, password, null);
+    }
+
+    public static AuthenticationModel createInstanceOrThrow(String username, String password, String clientId) {
+        if (username == null || username.isEmpty() || password == null) {
+            throw new IllegalArgumentException();
+        }
+
+        return new AuthenticationModel(username, password, clientId);
     }
 
     /**
      * instantiates a new instance of the {@code AuthenticationModel} class ensuring that
      * username and password are both non-null and non-empty
      */
-    public AuthenticationModel(String username, String password, Optional<String> clientId) {
-        if (username == null || username.isEmpty() || password == null || password.isEmpty()) {
-            throw new IllegalArgumentException();
-        }
+    public AuthenticationModel(String username, String password, String clientId) {
         this.username = username;
         this.password = password;
         this.clientId = clientId;
@@ -62,7 +67,7 @@ public class AuthenticationModel {
      * @return true if client id is set; otherwise, false
      */
     public boolean hasClientId() {
-        return clientId.isPresent();
+        return clientId != null;
     }
 
     /**
@@ -71,7 +76,11 @@ public class AuthenticationModel {
      * @throws NoSuchElementException if this instance does not have a clientId
      */
     public String getClientId() throws NoSuchElementException {
-        return clientId.orElseThrow(NoSuchElementException::new);
+        if (clientId == null) {
+            throw new NoSuchElementException();
+        }
+
+        return clientId;
     }
 
 
