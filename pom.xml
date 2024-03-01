@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
@@ -12,7 +11,7 @@
 
   <groupId>com.rapid7</groupId>
   <artifactId>jenkinsci-appspider-plugin</artifactId>
-  <version>1.0.17-SNAPSHOT</version>
+  <version>1.0.17</version>
   <packaging>hpi</packaging>
 
   <name>AppSpider Plugin</name>
@@ -79,7 +78,7 @@
     <connection>scm:git:git://github.com/jenkinsci/appspider-build-scanner-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/appspider-build-scanner-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/appspider-build-scanner-plugin.git</url>
-    <tag>jenkinsci-appspider-plugin-1.0.16</tag>
+    <tag>jenkinsci-appspider-plugin-1.0.17</tag>
   </scm>
 
   <!-- Turning off doclint -->
