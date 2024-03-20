@@ -10,11 +10,11 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * various utility merthods that have no better home
+ * various utility methods that have no better home
  */
-public class Utility {
+public class FunctionalUtility {
 
-    private Utility() {
+    private FunctionalUtility() {
     }
 
     /**

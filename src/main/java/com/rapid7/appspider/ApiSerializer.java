@@ -8,6 +8,7 @@ import com.rapid7.appspider.datatransferobjects.ClientIdNamePair;
 import com.rapid7.appspider.datatransferobjects.ScanResult;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
+import hudson.model.Api;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -18,13 +19,17 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
 
-public class ApiSerializer {
+public final class ApiSerializer {
 
     private final LoggerFacade logger;
 
-    public ApiSerializer(LoggerFacade logger) {
-        if (logger == null)
+    public static ApiSerializer createInstanceOrThrow(LoggerFacade logger) {
+        if (logger == null) {
             throw new IllegalArgumentException("logger cannot be null");
+        }
+        return new ApiSerializer(logger);
+    }
+    private ApiSerializer(LoggerFacade logger) {
         this.logger = logger;
     }
 
@@ -67,7 +72,7 @@ public class ApiSerializer {
 
     public ScanResult getScanResult(JSONObject jsonObject) {
         try {
-            return new ScanResult(jsonObject);
+            return ScanResult.createInstanceFromJsonOrThrow(jsonObject);
         } catch (IllegalArgumentException e) {
             logger.severe(e.toString());
             return new ScanResult(false, "");
