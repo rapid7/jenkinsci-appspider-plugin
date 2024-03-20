@@ -13,7 +13,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-public class Scan {
+public class DastScan {
     private static final String SUCCESSFUL_SCAN = "Completed|Stopped";
     private static final String UNSUCCESSFUL_SCAN = "ReportError";
     private static final String FAILED_SCAN = "Failed";
@@ -25,13 +25,17 @@ public class Scan {
     private final LoggerFacade log;
     private Optional<String> id;
 
-    public Scan(EnterpriseClient client, ScanSettings settings, LoggerFacade log) {
+    public static DastScan createInstanceOrThrow(EnterpriseClient client, ScanSettings settings, LoggerFacade log) {
         if (Objects.isNull(client))
             throw new IllegalArgumentException("client cannot be null");
         if (Objects.isNull(settings))
             throw new IllegalArgumentException("settings cannot be null");
         if (Objects.isNull(log))
             throw new IllegalArgumentException("log cannot be null");
+        return new DastScan(client, settings, log);
+    }
+
+    private DastScan(EnterpriseClient client, ScanSettings settings, LoggerFacade log) {
         this.client = client;
         this.settings = settings;
         this.log = log;
@@ -47,7 +51,7 @@ public class Scan {
 
     public boolean process(AuthenticationModel authModel) throws InterruptedException {
         Optional<String> maybeAuthToken = client.login(authModel);
-        if (!maybeAuthToken.isPresent()) {
+        if (maybeAuthToken.isEmpty()) {
             log.println(UNAUTHORIZED_ERROR);
             return false;
         }
@@ -71,7 +75,7 @@ public class Scan {
         waitForScanCompletion(runResult.getScanId(), authModel);
 
         maybeAuthToken = client.login(authModel);
-        if (!maybeAuthToken.isPresent()) {
+        if (maybeAuthToken.isEmpty()) {
             log.println(UNAUTHORIZED_ERROR);
             return false;
         }
@@ -100,7 +104,7 @@ public class Scan {
         log.println("Value of Scan Config Engine Group name: " + settings.getScanConfigEngineGroupName());
 
         Optional<String> engineGroupId = client.getEngineGroupIdFromName(authToken, settings.getScanConfigEngineGroupName());
-        if (!engineGroupId.isPresent()) {
+        if (engineGroupId.isEmpty()) {
             log.println(String.format("no engine group matching %s was found.", settings.getScanConfigEngineGroupName()));
             return false;
         }
@@ -144,7 +148,7 @@ public class Scan {
     }
     private Optional<String> getStatus(String scanId, AuthenticationModel authModel) {
         Optional<String> authToken = client.login(authModel);
-        if (!authToken.isPresent()) {
+        if (authToken.isEmpty()) {
             log.println(UNAUTHORIZED_ERROR);
             return Optional.empty();
         }

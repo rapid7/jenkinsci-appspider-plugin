@@ -125,7 +125,7 @@ public final class EnterpriseRestClient implements EnterpriseClient {
     public Optional<String[]> getEngineGroupNamesForClient(String authToken) {
         return getEngineGroupsForClient(authToken)
                 .map(map -> new ArrayList<>(map.keySet()))
-                .map(Utility::toStringArray);
+                .map(FunctionalUtility::toStringArray);
     }
 
     /**
@@ -260,7 +260,7 @@ public final class EnterpriseRestClient implements EnterpriseClient {
     public Optional<String[]> getConfigNames(String authToken) {
         return getConfigs(authToken)
             .flatMap(apiSerializer::getConfigNames)
-            .map(Utility::toStringArray);
+            .map(FunctionalUtility::toStringArray);
     }
 
     /**

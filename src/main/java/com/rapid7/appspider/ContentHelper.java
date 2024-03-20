@@ -25,8 +25,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import static com.rapid7.appspider.Utility.isSuccessStatusCode;
-
 /**
  * parsing and serializing helper methods for handling JSONObject manipulation
  */
@@ -34,9 +32,13 @@ public class ContentHelper {
 
     private final LoggerFacade logger;
 
-    public ContentHelper(LoggerFacade logger) {
+    public static ContentHelper createInstanceOrThrow(LoggerFacade logger) {
         if (Objects.isNull(logger))
             throw new IllegalArgumentException("logger cannot be null");
+        return new ContentHelper(logger);
+    }
+
+    private ContentHelper(LoggerFacade logger) {
         this.logger = logger;
     }
 
@@ -111,11 +113,11 @@ public class ContentHelper {
      * @return on success an Optional containing a JSONObject; otherwise, Optional.empty()
      */
     public Optional<JSONObject> responseToJSONObject(HttpResponse response, String path) {
-        if (isSuccessStatusCode(response)) {
+        if (FunctionalUtility.isSuccessStatusCode(response)) {
             return asJson(response.getEntity());
         }
 
-        logResponseFailure("request failed", response);
+        logResponseFailure("request failed " + path, response);
         return Optional.empty();
     }
 
@@ -140,8 +142,8 @@ public class ContentHelper {
      * @param key key in the json object to serve as key in the map
      * @param value value in the json object to serve as value in the map
      * @param optionalJsonObject Optional{JSONObject} to extract key/value pairs from if present
-     * @return on successs a Map{String, String} of key/value pairs from JSONObject;
-     *         otherwiwse Optional.empty()
+     * @return on successes a Map{String, String} of key/value pairs from JSONObject;
+     *         otherwise Optional.empty()
      */
     public Optional<Map<String, String>> asMapOfStringToString(String key, String value, Optional<JSONObject> optionalJsonObject) {
         return optionalJsonObject.flatMap(json ->

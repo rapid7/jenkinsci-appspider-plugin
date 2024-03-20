@@ -24,21 +24,25 @@ public class HttpClientFactory {
     private final SSLConnectionSocketFactory socketFactory;
     final SSLContext sslContext;
 
-    public HttpClientFactory(boolean allowSelfSignedCertificates) throws SslContextCreationException {
+    public static HttpClientFactory createInstanceOrThrow(boolean allowSelfSignedCertificates)
+            throws SslContextCreationException {
         try {
             // ignore self-signed certs since we have no control over the server setup and as such can't
             // enforce proper certificate usage
             if (allowSelfSignedCertificates) {
-                sslContext = new SSLContextBuilder()
+                return new HttpClientFactory(new SSLContextBuilder()
                         .loadTrustMaterial(null, (x509CertChain, authType) -> true)
-                        .build();
+                        .build());
             } else {
-                sslContext = SSLContexts.createDefault();
+                return new HttpClientFactory(SSLContexts.createDefault());
             }
-
         } catch (NoSuchAlgorithmException | KeyStoreException | KeyManagementException e) {
             throw new SslContextCreationException("Unable to configure SSL Context", e);
         }
+    }
+
+    private HttpClientFactory(SSLContext context) {
+        sslContext = context;
         socketFactory = new SSLConnectionSocketFactory(sslContext,
                 new String[]{"TLSv1.2"},
                 null, NoopHostnameVerifier.INSTANCE);
