@@ -151,3 +151,4 @@ pom.xml.releaseBackup
 release.properties
 
 .dccache
+/.vs
